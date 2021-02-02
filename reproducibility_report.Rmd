@@ -1,0 +1,26 @@
+---
+title: "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex"
+author: "Evgeniia Golovina"
+date: "02/02/2021"
+output:
+    html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# install.packages("pacman")
+pacman::p_load(UpSetR)
+
+setwd("/Users/foffa/Desktop/Learning/online_edu")
+```
+
+#### Reproducibility report
+
+This R Markdown document generates the reproducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study.
+
+```{r }
+
+```
+
+##
