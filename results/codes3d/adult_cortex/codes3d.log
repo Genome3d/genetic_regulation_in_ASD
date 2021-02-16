@@ -1,0 +1,28 @@
+SETTINGS
+Run mode:	SNP
+FDR threshold:	0.05
+MAF threshold:	0.1
+Effect size:	allelic fold change (aFC)
+Hi-C libraries:	Dorsolateral_prefrontal_cortex_cells_Schmitt2016
+
+eQTL tissues:	Brain_Cortex
+
+Processing SNP input...
+  * 344 out of 344 SNPs passed parsing criteria.
+  Time elasped: 0.03 mins
+Finding chromatin interactions in...
+  Time elasped: 0.07 mins.
+Identifying genes interacting with SNPs in...
+  * Filtering gene interactions...
+  Time elasped: 0.03 mins.
+Identifying eQTLs...
+  * 2161 eQTL associations tested
+  * 67 eQTL associations passed FDR <= 0.05.
+  * eQTLs mapped at MAF >= 0.1 and pval threshold <=1.
+  Time elasped: 0.74 mins.
+Writing final output...
+  * Computing Hi-C data...
+  * Collecting gene expression rates...
+  Time elasped: 0.02 mins.
+Done.
+Total time elasped: 1.85 mins.

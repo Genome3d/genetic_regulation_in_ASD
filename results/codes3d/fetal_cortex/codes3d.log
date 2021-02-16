@@ -1,0 +1,28 @@
+SETTINGS
+Run mode:	SNP
+FDR threshold:	0.05
+MAF threshold:	0.1
+Effect size:	allelic fold change (aFC)
+Hi-C libraries:	Cortical_plate_neurons_Won2016, Germinal_zone_neurons_Won2016
+
+eQTL tissues:	Fetal_Brain_Cortex_Walker2019
+
+Processing SNP input...
+  * 344 out of 344 SNPs passed parsing criteria.
+  Time elasped: 0.14 mins
+Finding chromatin interactions in...
+  Time elasped: 3.81 mins.
+Identifying genes interacting with SNPs in...
+  * Filtering gene interactions...
+  Time elasped: 0.30 mins.
+Identifying eQTLs...
+  * 80373 eQTL associations tested
+  * 131 eQTL associations passed FDR <= 0.05.
+  * eQTLs mapped at MAF >= 0.1 and pval threshold <=1.
+  Time elasped: 0.89 mins.
+Writing final output...
+  * Computing Hi-C data...
+  * Collecting gene expression rates...
+  Time elasped: 0.03 mins.
+Done.
+Total time elasped: 7.83 mins.
