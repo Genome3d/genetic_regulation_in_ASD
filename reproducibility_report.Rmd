@@ -16,9 +16,7 @@ pacman::p_load(ggplot2, pander)
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
 
-## Reporducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study.
-
-This R Markdown document generates the reproducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study. 
+This is a reproducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study. 
 
 Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were used for data processing, analysis and visualisation.  
 
@@ -131,6 +129,124 @@ ggplot(shared.df, aes(x = snps, y = percentage, fill = "#A9A9A9")) +
               size = 8, fontface = 'italic') +
     labs(y = "Percentage") + 
     scale_fill_manual(values=c("#A9A9A9"))
+#dev.off()
+```
+
+### 3. Functional annotation of eQTLs associated with ASD
+
+We used [wANNOVAR tool](http://wannovar.wglab.org/) to obtain information about the locus eQTLs tagged. First, we extracted the funnctional annotation for ASD-associated eQTLs: `cut -f1,2,3,6,132 results/wannovar/asd_genome_summary.txt | sort -u > results/wannovar/asd_fun_snp_ann.txt`
+
+```{r wANNOVAR, fig.width=7, fig.height=5}
+# Calculate percentage of functionally annotated SNPs
+cal_ann <- function(phe, total) {
+    df <- data.frame(matrix(ncol=3, nrow=0))
+    colnames(df)<- c("annotation","number", "percent")
+    for (i in 1:length(phe)){
+        down <- nrow(phe[which(phe$Annotation=="downstream"), ])
+        df[nrow(df) + 1,] = list(annotation = "downstream", number = down, percent = down/total*100)
+        ex <- nrow(phe[which(phe$Annotation=="exonic"), ])
+        df[nrow(df) + 1,] = list(annotation = "exonic", number = ex, percent = ex/total*100)
+        inter <- nrow(phe[which(phe$Annotation=="intergenic"), ])
+        df[nrow(df) + 1,] = list(annotation = "intergenic", number = inter, percent = inter/total*100)
+        intro <- nrow(phe[which(phe$Annotation=="intronic"), ])
+        df[nrow(df) + 1,] = list(annotation = "intronic", number = intro, percent = intro/total*100)
+        ncRNA_ex <- nrow(phe[which(phe$Annotation=="ncRNA_exonic"), ])
+        df[nrow(df) + 1,] = list(annotation = "ncRNA_exonic", number = ncRNA_ex, percent = ncRNA_ex/total*100)
+        ncRNA_in <- nrow(phe[which(phe$Annotation=="ncRNA_intronic"), ])
+        df[nrow(df) + 1,] = list(annotation = "ncRNA_intronic", number = ncRNA_in, percent = ncRNA_in/total*100)
+        up <- nrow(phe[which(phe$Annotation=="upstream"), ])
+        df[nrow(df) + 1,] = list(annotation = "upstream", number = up, percent = up/total*100)
+        UTR3 <- nrow(phe[which(phe$Annotation=="UTR3"), ])
+        df[nrow(df) + 1,] = list(annotation = "UTR3", number = UTR3, percent = UTR3/total*100)
+        }
+    df[!duplicated(df), ]
+}
+
+asd_ann <- read.table("results/wannovar/asd_fun_snp_ann.txt", sep = "\t", header=TRUE) # wANNOVAR annotation for all ASD-associated snps
+asd_ann_fetal <- subset(asd_ann, asd_ann$SNP %in% fetal_eqtls) # 80
+asd_ann_adult <- subset(asd_ann, asd_ann$SNP %in% adult_eqtls) # 58
+
+asd_fun_ann_fetal <- cal_ann(asd_ann_fetal, length(fetal_eqtls))
+asd_fun_ann_adult <- cal_ann(asd_ann_adult, length(adult_eqtls))
+
+# Fetal eQTLs
+f_number <- c(asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="downstream",][,2],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="exonic",][,2],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="intergenic",][,2],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="intronic",][,2],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="ncRNA_intronic",][,2],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="ncRNA_exonic",][,2],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="UTR3",][,2])
+f_percent <- c(asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="downstream",][,3],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="exonic",][,3],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="intergenic",][,3],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="intronic",][,3],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="ncRNA_intronic",][,3],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="ncRNA_exonic",][,3],
+              asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="UTR3",][,3])
+
+fetal_eqtls.df <- data.frame(
+    annotation = c("downstream", "exonic", "intergenic", "intronic", "ncRNA_intronic",
+                 "ncRNA_exonic", "UTR3"),
+    number = f_number,
+    percent = f_percent)
+
+#pdf("figures/asd_fetal_fun_ann.pdf", width = 6, height = 4)
+ggplot(fetal_eqtls.df, aes(x = annotation, y = percent, fill = "#009444")) +
+    geom_bar(stat="identity", position = "dodge") + 
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.y = element_blank(),
+          legend.position = "none",
+          axis.text=element_text(size=14, colour = "black"),
+          axis.title=element_text(size=16, colour = "black")) +
+    scale_fill_manual(values = "#009444") +
+    geom_text(aes(y = percent, label = paste0(round(percent, digits=2), "%")),
+              position=position_dodge(width=0.9), vjust = 0.25, hjust = -0.25, color = "black",
+              size = 3.5) + 
+    scale_y_continuous(limits = c(0, 55)) +
+    ylab("Percentage") + 
+    coord_flip()
+#dev.off()
+
+# Adult eQTLs
+a_number <- c(asd_fun_ann_adult[asd_fun_ann_adult$annotation=="downstream",][,2],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="exonic",][,2],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="intergenic",][,2],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="intronic",][,2],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="ncRNA_intronic",][,2],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="ncRNA_exonic",][,2],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="UTR3",][,2])
+a_percent <- c(asd_fun_ann_adult[asd_fun_ann_adult$annotation=="downstream",][,3],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="exonic",][,3],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="intergenic",][,3],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="intronic",][,3],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="ncRNA_intronic",][,3],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="ncRNA_exonic",][,3],
+              asd_fun_ann_adult[asd_fun_ann_adult$annotation=="UTR3",][,3])
+
+adult_eqtls.df <- data.frame(
+    annotation = c("downstream", "exonic", "intergenic", "intronic", "ncRNA_intronic",
+                 "ncRNA_exonic", "UTR3"),
+    number = a_number,
+    percent = a_percent)
+
+#pdf("figures/asd_adult_fun_ann.pdf", width = 6, height = 4)
+ggplot(adult_eqtls.df, aes(x = annotation, y = percent, fill = "#92278F")) +
+    geom_bar(stat="identity", position = "dodge") + 
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.y = element_blank(),
+          legend.position = "none",
+          axis.text=element_text(size=14, colour = "black"),
+          axis.title=element_text(size=16, colour = "black")) +
+    scale_fill_manual(values = "#92278F") +
+    geom_text(aes(y = percent, label = paste0(round(percent, digits=2), "%")),
+              position=position_dodge(width=0.9), vjust = 0.25, hjust = -0.25, color = "black",
+              size = 3.5) + 
+    scale_y_continuous(limits = c(0, 55)) +
+    ylab("Percentage") + 
+    coord_flip()
 #dev.off()
 ```
 
