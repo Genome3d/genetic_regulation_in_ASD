@@ -10,17 +10,128 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 
 # install.packages("pacman")
-pacman::p_load(UpSetR)
+# load libraries
+pacman::p_load(ggplot2, pander)
 
-setwd("/Users/foffa/Desktop/Learning/online_edu")
+setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
 
-#### Reproducibility report
+## Reporducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study.
 
-This R Markdown document generates the reproducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study.
+This R Markdown document generates the reproducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study. 
 
-```{r }
+Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were used for data processing, analysis and visualisation.  
 
+1. Fetal brain cortical plate and germinal zone neuron Hi-C data are available via the [dbGaP](https://www.ncbi.nlm.nih.gov/gap/) (accession: phs001190.v1.p1). Adult dorsolateral prefrontal cortex cells Hi-C data is available on [GEO](https://www.ncbi.nlm.nih.gov/geo/) (accession: GSE87112).
+2. Total RNA-seq and WGS datasets across GTEx v8 tissues are available via the [dbGaP](https://www.ncbi.nlm.nih.gov/gap/) (accession: phs000424.v8.p2). Total RNA-seq and genotyping datasets for fetal brain cortical tissue from 14-21 postconceptional weeks (PCWs) are available via the dbGaP (https://www.ncbi.nlm.nih.gov/gap/) (accession: phs001900.v1.p1).
+3. Human genome build hg38 release 75 (GRCh38) (Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta) was downloaded from [gs://gtex-resources](https://console.cloud.google.com/storage/browser/gtex-resources/references).
+4. SNP genomic positions for genome GRCh38p7 build 151 were obtained from ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b151_GRCh38p7.
+5. Gene annotations for GENCODE v26 (gencode.v26.GRCh38.genes.gtf) were downloaded from [gs://gtex-resources](https://console.cloud.google.com/storage/browser/gtex-resources/references).
+6. Roadmap Epigenomics Project 15-state ChromHMM models for adult dorsolateral prefrontal cortex (E073_15_coreMarks_hg38lift_mnemonics.bed.gz) and fetal brain (E081_15_coreMarks_hg38lift_mnemonics.bed.gz) were downloaded from https://egg2.wustl.edu/roadmap/data/byFileType/chromhmmSegmentations/ChmmModels/coreMarks/jointModel/final/.
+7. The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from https://string-db.org/.
+
+### 1. Identification of significant spatial eQTL SNP-gene interactions using CoDeS3D
+
+First, we run CoDeS3D pipeline to get regulatory interactions across fetal cortical tissue: `python codes3d/codes3d.py -s data/asd_snps/344_asd_snps.txt -o results/codes3d/fetal_cortex -n Cortical_plate_neurons_Won2016 Germinal_zone_neurons_Won2016 -t Fetal_Brain_Cortex_Walker2019`.
+Then across adult cortical tissue: `python codes3d/codes3d.py -s data/asd_snps/344_asd_snps.txt -o results/codes3d/adult_cortex -n Dorsolateral_prefrontal_cortex_cells_Schmitt2016 -t Brain_Cortex`
+
+```{r loading_codes3d_results}
+# get number of ASD-associated GWAS snps present in both fetal and adult eqtl databases
+asd_snps <- readLines("data/asd_snps/344_asd_snps.txt") # 344
+
+# read significant interactions in fetal and adult cortical tissues
+fetal <- read.table("results/codes3d/fetal_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
+adult <- read.table("results/codes3d/adult_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
+
+# get eQTLs in fetal and adult cortical tissues
+fetal_eqtls <- unique(fetal$snp) # 80
+adult_eqtls <- unique(adult$snp) # 58
+
+# get eGenes in fetal and adult cortical tissues
+fetal_egenes <- unique(fetal$gene) # 81
+adult_egenes <- unique(adult$gene) # 44
 ```
 
-##
+### 2. Percentage of eQTL SNPs vs non-eQTL SNPs
+
+```{r eqtl_vs_non-eQTL, fig.width=7, fig.height=7}
+snp.df <- data.frame(
+  eqtl_db = rep(c('Adult', 'Fetal'), each=1),
+  snps = rep(c("eQTL","non-eQTL"), each=2),
+  number = c(length(adult_eqtls), length(fetal_eqtls), length(asd_snps)-length(adult_eqtls),
+             length(asd_snps)-length(fetal_eqtls)),
+  percentage = c(round(length(adult_eqtls)/length(asd_snps)*100, 2),
+                 round(length(fetal_eqtls)/length(asd_snps)*100, 2), 
+                 round((length(asd_snps)-length(adult_eqtls))/length(asd_snps)*100, 2),
+                 round((length(asd_snps)-length(fetal_eqtls))/length(asd_snps)*100, 2)))
+
+#pdf("figures/eQTLs_vs_non-eQTLs.pdf", width = 8, height = 9)
+ggplot(snp.df, aes(x = snps, y = percentage, fill = eqtl_db)) +
+    geom_bar(stat="identity", position = "dodge") + 
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_blank(),
+          legend.text=element_text(size=20),
+          legend.title=element_blank(),
+          legend.position = "bottom",
+          legend.direction = "horizontal",
+          axis.text=element_text(size=20, colour = "black"),
+          axis.title=element_text(size=24, colour = "black"),
+          strip.text.x = element_text(size = 19, colour = "black")) +
+    geom_text(aes(y = percentage, label = paste0("n=", number)),
+              position=position_dodge(width=0.9), vjust=-0.25, color = "black", 
+              size = 8, fontface = 'italic') +
+    scale_fill_manual(values=c("#92278F" ,"#009444")) +
+    labs(y = "Percentage") #+
+    #facet_grid(.~eQTL_db)
+#dev.off()
+```
+
+We used Fisher’s exact test to check if the proportion of eqtls is significantly different in fetal and adult groups.
+
+```{r fishers_exact_test}
+# The Fisher’s exact test is used when the total sample size is less than 1000.
+eqtl.df <- data.frame(tissue=c('Adult', 'Fetal'), 
+                      eqtl=c(length(adult_eqtls), length(fetal_eqtls)),
+                      non_eqtl=c(length(asd_snps)-length(adult_eqtls),
+                                 length(asd_snps)-length(fetal_eqtls)))
+rownames(eqtl.df) <- eqtl.df[,1]; eqtl.df[,1] <- NULL
+f_test <- fisher.test(eqtl.df) # p-value = 0.04531
+```
+
+The proportion of eQTLs is significantly different in two groups with a p-value = `r pander(f_test$p.value)` (less than the significance level alpha = 0.05).  
+
+Thirty ASD-associated eQTLs were shared between fetal and adult cortical tissues.
+
+```{r shared_eqtls_and_non-eqtls, fig.width=7, fig.height=7}
+shared_eqtls <- intersect(fetal_eqtls, adult_eqtls) # 30
+shared_noneqtls <- intersect(asd_snps[!(asd_snps %in% fetal_eqtls)],
+                             asd_snps[!(asd_snps %in% adult_eqtls)]) # 236
+
+shared.df <- data.frame(
+  snps = rep(c("eQTL","non-eQTL")),
+  number = c(length(shared_eqtls), length(shared_noneqtls)),
+  percentage = c(round(length(shared_eqtls)/length(asd_snps)*100, 2), 
+                 round(length(shared_noneqtls)/length(asd_snps)*100, 2)))
+
+#pdf("figures/shared_eQTL_and_non-eQTL.pdf", width = 5, height = 9)
+ggplot(shared.df, aes(x = snps, y = percentage, fill = "#A9A9A9")) +
+    geom_bar(stat="identity", position = "dodge") + 
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_blank(),
+          legend.text=element_text(size=20),
+          legend.title=element_blank(),
+          legend.position = "none",
+          axis.text=element_text(size=20, colour = "black"),
+          axis.title=element_text(size=24, colour = "black"),
+          strip.text.x = element_text(size = 19, colour = "black")) +
+    geom_text(aes(y = percentage, label = paste0("n=", number)),
+              position=position_dodge(width=0.9), vjust=-0.25, color = "black", 
+              size = 8, fontface = 'italic') +
+    labs(y = "Percentage") + 
+    scale_fill_manual(values=c("#A9A9A9"))
+#dev.off()
+```
+
+
