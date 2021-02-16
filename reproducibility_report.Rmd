@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # install.packages("pacman")
 # load libraries
-pacman::p_load(ggplot2, pander)
+pacman::p_load(ggplot2, pander, dplyr, tidyr)
 
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
@@ -247,6 +247,55 @@ ggplot(adult_eqtls.df, aes(x = annotation, y = percent, fill = "#92278F")) +
     scale_y_continuous(limits = c(0, 55)) +
     ylab("Percentage") + 
     coord_flip()
+#dev.off()
+```
+
+Enrichment of fetal and adult eQTLs within transcription factor binding sites was determined using [SNP2TFBS](https://ccg.epfl.ch//snp2tfbs/).
+
+```{r SNP2TFBS, fig.width=9, fig.height=5}
+snp2tfbs <- read.table("results/snp2tfbs/match_output_20913.txt", header = FALSE)
+fetal_snp2tfbs <- snp2tfbs[snp2tfbs$V7 %in% fetal_eqtls, ]
+adult_snp2tfbs <- snp2tfbs[snp2tfbs$V7 %in% adult_eqtls, ]
+shared_snp2tfbs <- snp2tfbs[snp2tfbs$V7 %in% shared_eqtls, ]
+
+# split the V6 column by ";"
+fetal_snp2tfbs <- separate(fetal_snp2tfbs, col=V6, into = c("MATCH", "TF", "ScoreDiff"), sep = ";")
+adult_snp2tfbs <- separate(adult_snp2tfbs, col=V6, into = c("MATCH", "TF", "ScoreDiff"), sep = ";")
+shared_snp2tfbs <- separate(shared_snp2tfbs, col=V6, into = c("MATCH", "TF", "ScoreDiff"), sep = ";")
+
+# create a dataframe with number of affected TFBSs by fetal, adult or shared eqtls
+snp2tfbs.df <- data.frame(
+    eqtl_db = rep(c('Adult', 'Fetal', 'Shared'), each=5),
+    tfbs = rep(1:5, 3),
+    snps = c(nrow(adult_snp2tfbs[adult_snp2tfbs$MATCH=="MATCH=1",]),
+             nrow(adult_snp2tfbs[adult_snp2tfbs$MATCH=="MATCH=2",]),
+             nrow(adult_snp2tfbs[adult_snp2tfbs$MATCH=="MATCH=3",]),
+             nrow(adult_snp2tfbs[adult_snp2tfbs$MATCH=="MATCH=4",]),
+             nrow(adult_snp2tfbs[adult_snp2tfbs$MATCH=="MATCH=5",]),
+             nrow(fetal_snp2tfbs[fetal_snp2tfbs$MATCH=="MATCH=1",]),
+             nrow(fetal_snp2tfbs[fetal_snp2tfbs$MATCH=="MATCH=2",]),
+             nrow(fetal_snp2tfbs[fetal_snp2tfbs$MATCH=="MATCH=3",]),
+             nrow(fetal_snp2tfbs[fetal_snp2tfbs$MATCH=="MATCH=4",]),
+             nrow(fetal_snp2tfbs[fetal_snp2tfbs$MATCH=="MATCH=5",]),
+             nrow(shared_snp2tfbs[shared_snp2tfbs$MATCH=="MATCH=1",]),
+             nrow(shared_snp2tfbs[shared_snp2tfbs$MATCH=="MATCH=2",]),
+             nrow(shared_snp2tfbs[shared_snp2tfbs$MATCH=="MATCH=3",]),
+             nrow(shared_snp2tfbs[shared_snp2tfbs$MATCH=="MATCH=4",]),
+             nrow(shared_snp2tfbs[shared_snp2tfbs$MATCH=="MATCH=5",])))
+
+#pdf("figures/fun_annotation/snp2tfbs_geombar.pdf", width = 10, height = 6)
+ggplot(data = snp2tfbs.df, aes(x=tfbs, y=snps, fill=eqtl_db)) +
+    geom_bar(stat="identity", position = "dodge") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          legend.position = "none",
+          axis.text=element_text(size=20, colour = "black"),
+          axis.title=element_text(size=24, colour = "black"),
+          strip.text.x = element_text(size = 18, colour = "black")) +
+    labs(x = "Number of TFBS affected", y = "Number of SNPs", color=" ") +
+    scale_fill_manual(values=c("#92278F" ,"#009444", "darkgray")) +
+    facet_grid(.~eqtl_db) #+
+    #coord_flip()
 #dev.off()
 ```
 
