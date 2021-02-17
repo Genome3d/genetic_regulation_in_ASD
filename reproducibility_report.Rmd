@@ -813,7 +813,49 @@ a_autdb <- intersect(AutDB_genes, adult_egenes) # 7
 linked_to_asd <- unique(c(f_autdb, a_autdb)) # 11
 ```
 
-We identified `r pander(length(linked_to_asd))` genes that had been previously linked to ASD.
+We identified `r pander(length(linked_to_asd))` genes (`r pander(length(f_autdb))` in fetal and `r pander(length(a_autdb))` in adult cortical tissues) that had been previously linked to ASD. Bootstrapping analysis revealed that these overlaps are significant (p < 0.01, n=10,000).
+
+```{r bootstrapping_egenes}
+# Bootrstrapping function accepts the number of egenes-associated with ASD, the reference set 1 of egenes (e.g. all egenes), the reference set 2 (AutDB genes), the actual observed overlap, and the number of bootstraps to perform (usually 10,000). It returns a bootstrapping p value for the overlap.
+egenes_bootstrapping <- function(in1, ref_1, ref_2, act_overlap, num) {
+    # resample snps from the reference set
+    resampled_1 <- lapply(1:num, function(i) sample(ref_1, in1,
+                                                  replace=TRUE))
+    # make 10000 bootstraps of AutDB
+    resampled_2 <- rep(list(ref_2), num)
+    # get number of overlaps between new sets of snps
+    overlap_num <- mapply(function(x, y) {
+        intersect(x, y)
+        }, x=resampled_1, y=resampled_2)
+    # count instances that have overlaps more or equal to actual overlap
+    actual_overlaps <- c()
+    for (i in 1:length(overlap_num)){
+        if (length(overlap_num[[i]]) >= act_overlap){
+            actual_overlaps <- append(actual_overlaps, length(overlap_num[[i]]))
+        }
+    }
+    # calculate bootstrapping p value
+    p_value <- sum(actual_overlaps)/num
+    p_value
+}
+
+# Testing
+#input_1 <- LETTERS[1:5]; reference1 <- LETTERS; reference2 <- rev(LETTERS)[1:3]
+#act_overlap <- 1; num <- 10
+#egenes_bootstrapping(5, reference1, reference2, act_overlap, num)
+
+# Bootstrapping analysis between AutDB and ASD genes
+all_genes.df <- read.table("data/adult_brain.gene_tpm_median.txt") # the same with fetal
+all_genes <- unique(all_genes.df$V2) # should be 54592
+
+options(digits=3)
+set.seed(1234)
+# Fetal genes and AutDB
+egenes_bootstrapping(length(fetal_egenes), all_genes, AutDB_genes, length(f_autdb), 10000) # 0.0017
+# Adult genes and AutDB
+egenes_bootstrapping(length(adult_egenes), all_genes, AutDB_genes, length(a_autdb), 10000) # 7e-04
+```
+
 
 ### 6. Loss-of-function analysis.
 
@@ -920,54 +962,4 @@ a_df <- a_df[complete.cases(a_df), ] # 89,492 proteins
 
 
 
-### ?. Bootstrapping analysis
-
-```{r bootstrapping_egenes}
-# Bootrstrapping function accepts the number of egenes-associated with ASD, the reference set 1 of egenes (e.g. all egenes), the reference set 2 (AutDB genes), the actual observed overlap, and the number of bootstraps to perform (usually 10,000). It returns a bootstrapping p value for the overlap.
-egenes_bootstrapping <- function(in1, ref_1, ref_2, act_overlap, num) {
-    # resample snps from the reference set
-    resampled_1 <- lapply(1:num, function(i) sample(ref_1, in1,
-                                                  replace=TRUE))
-    # make 10000 bootstraps of AutDB
-    resampled_2 <- rep(list(ref_2), num)
-    # get number of overlaps between new sets of snps
-    overlap_num <- mapply(function(x, y) {
-        intersect(x, y)
-        }, x=resampled_1, y=resampled_2)
-    # count instances that have overlaps more or equal to actual overlap
-    actual_overlaps <- c()
-    for (i in 1:length(overlap_num)){
-        if (length(overlap_num[[i]]) >= act_overlap){
-            actual_overlaps <- append(actual_overlaps, length(overlap_num[[i]]))
-        }
-    }
-    # calculate bootstrapping p value
-    p_value <- sum(actual_overlaps)/num
-    #list(p_value=p_value, resampled_1=resampled_1, resampled_2=resampled_2,
-         #overlap_num=overlap_num,
-         #actual_overlaps=actual_overlaps)
-    p_value
-}
-
-# Testing
-input_1 <- LETTERS[1:5]
-reference1 <- LETTERS
-reference2 <- rev(LETTERS)[1:3]
-act_overlap <- 1
-num <- 10
-egenes_bootstrapping(5, reference1, reference2, act_overlap, num)
-
-# Bootstrapping analysis between ASD and SCZ snps
-setwd("/Volumes/resmed201800011-foffa/P5_fetal_vs_adult_brain_ASD/results/AutDB")
-asd_f_genes <- readLines("ff-cortex_egenes.txt") # should be 81
-asd_a_genes <- readLines("aa-cortex_egenes.txt") # should be 44
-all_genes.df <- readLines("all_genes.txt") # should be 54592
-autdb_genes <- readLines("AutDB_genes.txt") # should be 1237
-
-options(digits=3)
-set.seed(1234)
-# Fetal genes and AutDB
-egenes_bootstrapping(81, all_genes.df, autdb_genes, 8, 10000) # 0.0017
-# Adult genes and AutDB
-egenes_bootstrapping(44, all_genes.df, autdb_genes, 7, 10000) # 7e-04 or 0.0007
-```
+### 8. 
