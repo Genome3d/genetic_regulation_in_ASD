@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("pacman")
 # load libraries
 pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2, RColorBrewer,
-               ComplexHeatmap, circlize, EnsDb.Hsapiens.v86)
+               ComplexHeatmap, circlize, EnsDb.Hsapiens.v86, gprofiler2)
 
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
@@ -856,7 +856,6 @@ egenes_bootstrapping(length(fetal_egenes), all_genes, AutDB_genes, length(f_autd
 egenes_bootstrapping(length(adult_egenes), all_genes, AutDB_genes, length(a_autdb), 10000) # 7e-04
 ```
 
-
 ### 6. Loss-of-function analysis.
 
 ```{r LoF}
@@ -897,7 +896,206 @@ gnomad_pheno <- gnomad %>%
 #            row.names=FALSE)
 ```
 
-### 7. Protein-protein interactions (PPI) network analysis and vizualization.
+### 7. Gene Ontology (GO) enrichment analysis
+
+GO analysis was performed using the g:GOSt module of the g:Profiler tool. The significance level was determined using Benjamini-Hochberg algorithm (FDR < 0.05).
+
+```{r GO_analysis, fig.width=11, fig.height=6}
+# This function quieries g:GOSt module of the g:Profiler tool. It takes a vector of genes and quieries the GOSt module. It outputs the dataframe with the query results for the genes.
+query_go <- function(genes){
+    tryCatch({
+        t <- gost(query = genes, organism = "hsapiens", ordered_query = TRUE,
+                  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+                  measure_underrepresentation = FALSE, evcodes = TRUE,
+                  user_threshold = 0.05, correction_method = "fdr",
+                  domain_scope = "annotated", custom_bg = NULL,
+                  numeric_ns = "", sources = "GO", as_short_link = FALSE)
+        return(t[["result"]])
+        }, error=function(e){
+            cat("ERROR: ", conditionMessage(e), "\n")
+        })
+}
+
+#a_go <- query_go(adult_egenes); a_gos.df <- apply(a_go, 2, as.character)
+#write.table(a_gos.df, file = "results/go/a_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+a_gos.df <- read.table("results/go/a_all_gos_fdr.txt", header = TRUE, sep="\t")
+a_bp <- a_gos.df[grep('GO:BP', a_gos.df[, "source"]), ] # extracting only the 'GO:BP' terms
+a_bp_top10 <- as.data.frame(a_bp[1:10,])
+
+#pdf("figures/a_bp_top10.pdf", width = 11, height = 7)
+ggplot(a_bp_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
+                        y=-log10(as.numeric(p_value)), fill="#92278F")) +
+    geom_bar(stat="identity") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_text(size=16, colour = "black"),
+          axis.text=element_text(size=16, colour = "black"),
+          axis.title.y = element_blank(),
+          legend.position = "none") +
+    scale_fill_manual(values=c("#92278F")) +
+    labs(y = "-log10(p)") +
+    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
+    coord_flip()
+#dev.off()
+
+a_mf <- a_gos.df[grep('GO:MF', a_gos.df[, "source"]), ] # extracting only the 'GO:MF' terms
+a_mf_top10 <- as.data.frame(a_mf[1:10,])
+
+#pdf("figures/a_mf_top10.pdf", width = 9, height = 7)
+ggplot(a_mf_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
+                       y=-log10(as.numeric(p_value)), fill="#92278F")) +
+    geom_bar(stat="identity") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_text(size=16, colour = "black"),
+          axis.text=element_text(size=16, colour = "black"),
+          axis.title.y = element_blank(),
+          legend.position = "none") +
+    scale_fill_manual(values=c("#92278F")) +
+    labs(y = "-log10(p)") +
+    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
+    coord_flip()
+#dev.off()
+
+a_cc <- a_gos.df[grep('GO:CC', a_gos.df[, "source"]), ] # extracting only the 'GO:CC' terms
+a_cc_top10 <- as.data.frame(a_cc[1:10,])
+
+#pdf("figures/a_cc_top10.pdf", width = 8, height = 7)
+ggplot(a_cc_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
+                       y=-log10(as.numeric(p_value)), fill="#92278F")) +
+    geom_bar(stat="identity") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_text(size=16, colour = "black"),
+          axis.text=element_text(size=16, colour = "black"),
+          axis.title.y = element_blank(),
+          legend.position = "none") +
+    scale_fill_manual(values=c("#92278F")) +
+    labs(y = "-log10(p)") +
+    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
+    coord_flip()
+#dev.off()
+
+#f_go <- query_go(fetal_egenes); f_gos.df <- apply(f_go, 2, as.character)
+#write.table(f_gos.df, file = "results/go/f_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+
+f_gos.df <- read.table("results/go/f_all_gos_fdr.txt", header = TRUE, sep="\t")
+f_bp <- f_gos.df[grep('GO:BP', f_gos.df[, "source"]), ]
+f_bp_top10 <- as.data.frame(f_bp[1:10,])
+
+#pdf("figures/f_bp_top10.pdf", width = 9, height = 7)
+ggplot(f_bp_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
+                       y=-log10(as.numeric(p_value)), fill="#009444")) +
+    geom_bar(stat="identity") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_text(size=16, colour = "black"),
+          axis.text=element_text(size=16, colour = "black"),
+          axis.title.y = element_blank(),
+          legend.position = "none") +
+    scale_fill_manual(values=c("#009444")) +
+    labs(y = "-log10(p)") +
+    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
+    coord_flip()
+#dev.off()
+
+f_mf <- f_gos.df[grep('GO:MF', f_gos.df[, "source"]), ]
+f_mf_top10 <- as.data.frame(f_mf[1:10,])
+x_factor = sort(f_mf_top10[, "term_name"])
+x_factor = c("acyl-CoA desaturase activity", "arsenite methyltransferase activity",
+             "linoleoyl-CoA desaturase activity", "methylarsonite methyltransferase activity",
+             "MHC class II protein complex binding", "MHC protein complex binding",
+             "oxidoreductase activity",
+             "peptide antigen binding", "TAP binding", "TAP1 binding")
+
+# We replaced NA with "oxidoreductase activity..."
+#pdf("figures/f_mf_top10.pdf", width = 6, height = 7)
+ggplot(f_mf_top10, aes(x=factor(term_name, levels = rev(x_factor)),
+                       y=-log10(as.numeric(p_value)), fill="#009444")) +
+    geom_bar(stat="identity") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_text(size=16, colour = "black"),
+          axis.text=element_text(size=16, colour = "black"),
+          axis.title.y = element_blank(),
+          legend.position = "none") +
+    scale_fill_manual(values=c("#009444")) +
+    labs(y = "-log10(p)") +
+    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
+    coord_flip()
+#dev.off()
+
+f_cc <- f_gos.df[grep('GO:CC', f_gos.df[, "source"]), ]
+f_cc_top10 <- as.data.frame(f_cc[1:10,])
+
+#pdf("figures/f_cc_top10.pdf", width = 9, height = 7)
+ggplot(f_cc_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
+                       y=-log10(as.numeric(p_value)), fill="#009444")) +
+    geom_bar(stat="identity") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_text(size=16, colour = "black"),
+          axis.text=element_text(size=16, colour = "black"),
+          axis.title.y = element_blank(),
+          legend.position = "none") +
+    scale_fill_manual(values=c("#009444")) +
+    labs(y = "-log10(p)") +
+    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
+    coord_flip()
+#dev.off()
+```
+
+Top 10 biological processes for fetal and adult cortex-specific genes associated with the ASD-associated eQTLs, after removing all HLA genes from the lists.
+
+```{r without_HLA_genes}
+#a_egenes_nohla <- readLines("results/go/adult_egenes_nohla.txt")
+#a_go <- query_go(a_egenes_nohla); a_gos.df <- apply(a_go, 2, as.character)
+#write.table(a_gos.df, file = "results/go/a_nohla_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+a_gos.df <- read.table("results/go/a_nohla_all_gos_fdr.txt", header = TRUE, sep="\t")
+a_bp <- a_gos.df[grep('GO:BP', a_gos.df[, "source"]), ]
+a_bp_top10 <- as.data.frame(a_bp[1:10,])
+
+#pdf("figures/a_bp_top10_nohla.pdf", width = 10, height = 7)
+ggplot(a_bp_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
+                       y=-log10(as.numeric(p_value)), fill="#92278F")) +
+    geom_bar(stat="identity") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_text(size=14, colour = "black"),
+          axis.text=element_text(size=14, colour = "black"),
+          axis.title.y = element_blank(),
+          legend.position = "none") +
+    scale_fill_manual(values=c("#92278F")) +
+    labs(y = "-log10(p)") +
+    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
+    coord_flip()
+#dev.off()
+
+#f_egenes_nohla <- readLines("results/go/fetal_egenes_nohla.txt")
+#f_go <- query_go(f_egenes_nohla); f_gos.df <- apply(f_go, 2, as.character)
+#write.table(f_gos.df, file = "results/go/f_nohla_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+f_gos.df <- read.table("results/go/f_nohla_all_gos_fdr.txt", header = TRUE, sep="\t")
+f_bp <- f_gos.df[grep('GO:BP', f_gos.df[, "source"]), ]
+f_bp_top10 <- as.data.frame(f_bp[1:8,])
+
+#pdf("figures/f_bp_top10_nohla.pdf", width = 10, height = 7)
+ggplot(f_bp_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
+                       y=-log10(as.numeric(p_value)), fill="#009444")) +
+    geom_bar(stat="identity") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.x = element_text(size=14, colour = "black"),
+          axis.text=element_text(size=14, colour = "black"),
+          axis.title.y = element_blank(),
+          legend.position = "none") +
+    scale_fill_manual(values=c("#009444")) +
+    labs(y = "-log10(p)") +
+    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
+    coord_flip()
+#dev.off()
+```
+
+### 8. Protein-protein interactions (PPI) network analysis and vizualization.
 
 The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from [STRING website](https://string-db.org/cgi/download?sessionId=bBkmARm05QYT). We extracted only human PPIs with a combined score ≥ 400 between proteins:
 `zgrep ^"9606\." protein.links.full.v11.0.txt.gz | awk '($16 >= 400) { print $1, $2, $16 }' > human_PPIs.full.v11.0_400.txt`
