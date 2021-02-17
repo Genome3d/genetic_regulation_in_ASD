@@ -659,47 +659,7 @@ snps_bootstrapping(fetal_eqtls, scz_snps, gwas_snps, 78, 10000) # should be 0
 snps_bootstrapping(adult_eqtls, scz_snps, gwas_snps, 57, 10000) # should be 0
 ```
 
-### 4. Loss-of-function analysis.
-
-```{r LoF}
-# read significant interactions in fetal and adult cortical tissues
-fetal <- read.table("results/codes3d/fetal_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
-adult <- read.table("results/codes3d/adult_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
-
-# read gnomad file
-gnomad <- read.table(gzfile('data/gnomad.v2.1.1.lof_metrics.by_gene.txt.bgz','rt'), header = TRUE,
-                       sep="\t")
-
-gene_list <- fetal[, c("gene", "interaction_type", "snp", "log2_aFC")]
-gnomad <- gnomad[, c("gene", "pLI")]
-
-gnomad_pheno <- gnomad %>%
-    mutate(intolerant=ifelse(pLI>=0.9, "Intolerant", "Tolerant")) %>% 
-	mutate(intolerant=ifelse(is.na(intolerant),"nopli",intolerant)) %>% 
-	full_join(gene_list) %>% 
-	mutate(interaction_type=ifelse(is.na(interaction_type),"non-eQTL",interaction_type)) %>% 
-	mutate(interaction_type=factor(interaction_type,
-	                               levels=c("non-eQTL","Cis","Trans-intrachromosomal",
-	                                        "Trans-interchromosomal")))
-#write.table(gnomad_pheno, file = "results/LoF/fetal_LoF.txt", sep = "\t", col.names = TRUE,
-#            row.names=FALSE)
-
-gene_list <- adult[, c("gene", "interaction_type", "snp", "log2_aFC")]
-gnomad <- gnomad[, c("gene", "pLI")]
-
-gnomad_pheno <- gnomad %>%
-    mutate(intolerant=ifelse(pLI>=0.9, "Intolerant", "Tolerant")) %>% 
-	mutate(intolerant=ifelse(is.na(intolerant),"nopli",intolerant)) %>% 
-	full_join(gene_list) %>% 
-	mutate(interaction_type=ifelse(is.na(interaction_type),"non-eQTL",interaction_type)) %>% 
-	mutate(interaction_type=factor(interaction_type,
-	                               levels=c("non-eQTL","Cis","Trans-intrachromosomal",
-	                                        "Trans-interchromosomal")))
-#write.table(gnomad_pheno, file = "results/LoF/adult_LoF.txt", sep = "\t", col.names = TRUE,
-#            row.names=FALSE)
-```
-
-### 5. Analysis of eQTL effects on 15 eGenes shared between adult and fetal cortical tissues.
+### 4. Analysis of eQTL effects on 15 eGenes shared between adult and fetal cortical tissues.
 
 The ASD-associated eQTLs typically affected gene transcript levels collinearly up- and downregulate the expression of 15 eGenes common in both adult and fetal cortical tissues.
 
@@ -836,7 +796,66 @@ decorate_annotation("foo", slice = 1, {
 #dev.off()
 ```
 
-### 6. Protein-protein interactions (PPI) network analysis and vizualization.
+### 5. Identification of genes that have previously been linked to ASD risk.
+
+To identify existing and novel gene associations, we intersected our lists of genes, from fetal and adult cortical tissues, with a curated list of 1,237 genes that had been previously implicated in autism development ([AutDB](http://autism.mindspec.org/autdb/Welcome.do;jsessionid=9EC2C3BDD4F54A2223B757AE42B22E7A), accessed on 16/11/2020).
+
+```{r AutDB}
+# loading AutDB genes
+AutDB <- read.csv("data/AutDB_gene-report.csv")
+AutDB_genes <- unique(AutDB$Gene.Symbol) # 1237 AutDB genes
+
+# intersecting AutDB genes with genes regulated in fetal and adult cortex
+fetal_egenes <- unique(fetal$gene) # 81
+adult_egenes <- unique(adult$gene) # 44
+f_autdb <- intersect(AutDB_genes, fetal_egenes) # 8
+a_autdb <- intersect(AutDB_genes, adult_egenes) # 7
+linked_to_asd <- unique(c(f_autdb, a_autdb)) # 11
+```
+
+We identified `r pander(length(linked_to_asd))` genes that had been previously linked to ASD.
+
+### 6. Loss-of-function analysis.
+
+```{r LoF}
+# read significant interactions in fetal and adult cortical tissues
+fetal <- read.table("results/codes3d/fetal_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
+adult <- read.table("results/codes3d/adult_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
+
+# read gnomad file
+gnomad <- read.table(gzfile('data/gnomad.v2.1.1.lof_metrics.by_gene.txt.bgz','rt'), header = TRUE,
+                       sep="\t")
+
+gene_list <- fetal[, c("gene", "interaction_type", "snp", "log2_aFC")]
+gnomad <- gnomad[, c("gene", "pLI")]
+
+gnomad_pheno <- gnomad %>%
+    mutate(intolerant=ifelse(pLI>=0.9, "Intolerant", "Tolerant")) %>% 
+	mutate(intolerant=ifelse(is.na(intolerant),"nopli",intolerant)) %>% 
+	full_join(gene_list) %>% 
+	mutate(interaction_type=ifelse(is.na(interaction_type),"non-eQTL",interaction_type)) %>% 
+	mutate(interaction_type=factor(interaction_type,
+	                               levels=c("non-eQTL","Cis","Trans-intrachromosomal",
+	                                        "Trans-interchromosomal")))
+#write.table(gnomad_pheno, file = "results/LoF/fetal_LoF.txt", sep = "\t", col.names = TRUE,
+#            row.names=FALSE)
+
+gene_list <- adult[, c("gene", "interaction_type", "snp", "log2_aFC")]
+gnomad <- gnomad[, c("gene", "pLI")]
+
+gnomad_pheno <- gnomad %>%
+    mutate(intolerant=ifelse(pLI>=0.9, "Intolerant", "Tolerant")) %>% 
+	mutate(intolerant=ifelse(is.na(intolerant),"nopli",intolerant)) %>% 
+	full_join(gene_list) %>% 
+	mutate(interaction_type=ifelse(is.na(interaction_type),"non-eQTL",interaction_type)) %>% 
+	mutate(interaction_type=factor(interaction_type,
+	                               levels=c("non-eQTL","Cis","Trans-intrachromosomal",
+	                                        "Trans-interchromosomal")))
+#write.table(gnomad_pheno, file = "results/LoF/adult_LoF.txt", sep = "\t", col.names = TRUE,
+#            row.names=FALSE)
+```
+
+### 7. Protein-protein interactions (PPI) network analysis and vizualization.
 
 The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from [STRING website](https://string-db.org/cgi/download?sessionId=bBkmARm05QYT). We extracted only human PPIs with a combined score ≥ 400 between proteins:
 `zgrep ^"9606\." protein.links.full.v11.0.txt.gz | awk '($16 >= 400) { print $1, $2, $16 }' > human_PPIs.full.v11.0_400.txt`
