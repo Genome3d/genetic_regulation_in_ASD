@@ -11,7 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # install.packages("pacman")
 # load libraries
-pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2, RColorBrewer)
+pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2, RColorBrewer,
+               ComplexHeatmap, circlize)
 
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
@@ -650,6 +651,141 @@ gnomad_pheno <- gnomad %>%
 #            row.names=FALSE)
 ```
 
+### 5. Analysis of eQTL effects on 15 eGenes shared between adult and fetal cortical tissues.
 
+The ASD-associated eQTLs typically affected gene transcript levels collinearly up- and downregulate the expression of 15 eGenes common in both adult and fetal cortical tissues.
+
+```{r 15_shared_egenes, fig.width=10, fig.height=6}
+# read significant interactions in fetal and adult cortical tissues
+fetal <- read.table("results/codes3d/fetal_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
+adult <- read.table("results/codes3d/adult_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
+
+# get shared genes
+shared_egenes <- intersect(fetal_egenes, adult_egenes)
+
+f_shared_egenes <- subset(fetal, fetal$gene %in% shared_egenes)
+#write.table(f_shared_egenes, file = "results/ff_sh_egene_eqtls.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+a_shared_egenes <- subset(adult, adult$gene %in% shared_egenes)
+#write.table(a_shared_egenes, file = "results/aa_sh_egene_eqtls.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+col_names <- c("#1C75BC", "#ED1C24", "black")
+
+#unique(f_shared_egenes$snp) # 19
+#unique(a_shared_egenes$snp) # 23
+shared <- unique(c(unique(f_shared_egenes$snp), unique(a_shared_egenes$snp))) # 27 eqtls impact shared egenes
+row_od = c("DDHD2", "ITIH4", "PCNX1", "TAP2", "THOC7", "AS3MT", "FADS1", "FTCDNL1",
+           "SF3B1", "SNX19", "BAG6", "HLA-DMA", "PCCB", "TMEM161B-AS1", "ZNF391")
+
+## Fetal cortex
+f_sh_effects <- read.table("results/shared_genes/f_effects_on_shared_effect_size.txt", sep = "\t",
+                           header=TRUE, row.names = 1)
+f_sh_pvalues <- read.table("results/shared_genes/f_effects_on_shared_pvalue.txt", sep = "\t",
+                           header=TRUE, row.names = 1)
+
+mat_f_effects <- as.matrix(f_sh_effects)
+ef_colors = colorRamp2(c(-1.5,0,1.5), c("blue", "#E8E8E8","red"), space = "RGB")
+
+ha = rowAnnotation(foo = anno_empty(border = TRUE))
+ht = HeatmapAnnotation(top = anno_empty(border = FALSE))
+
+#pdf("figures/f_shared_effect_heatmap.pdf", width = 14, height = 10)
+Heatmap(mat_f_effects, name = "log2(aFC)", #column_title = "eQTL SNPs",
+        col = ef_colors, na_col = "white", #row_title = "shared eGenes",
+        cluster_rows = FALSE, cluster_columns = FALSE, row_names_side = "left",
+        column_names_side = "top", row_names_gp = gpar(fontface = "italic"),
+        row_order = row_od,
+        width = unit(17, "cm"), height = unit(10, "cm"),
+        right_annotation = ha, top_annotation = ht,
+        border = TRUE, rect_gp = gpar(col = "grey"))
+decorate_annotation("foo", slice = 1, {
+    grid.rect(x = 0, width = unit(10, "mm"), gp = gpar(fill = NA, col = NA), just = "left")
+    grid.text(paste("Fetal", collapse = "\n"), x = unit(5, "mm"), just = "centre", rot = 90,
+              gp = gpar(fontsize = 13, fontface = "bold"))
+    })
+decorate_annotation("top", slice = 1, {
+    grid.rect(x = 0, width = unit(0.7, "mm"), gp = gpar(fill = NA, col = NA), just = "centre")
+    })
+#dev.off()
+
+mat_f_pvalues <- as.matrix(f_sh_pvalues)
+pv_colors = colorRamp2(c(0,0.05), c("black","white"), space = "RGB")
+
+ha = rowAnnotation(foo = anno_empty(border = TRUE))
+ht = HeatmapAnnotation(top = anno_empty(border = FALSE))
+
+#pdf("figures/f_shared_pvalue_heatmap.pdf", width = 14, height = 10)
+Heatmap(mat_f_pvalues, name = "Adj pvalue", #column_title = "eQTL SNPs",
+        col = pv_colors, na_col = "white", #row_title = "shared eGenes",
+        cluster_rows = FALSE, cluster_columns = FALSE, row_names_side = "left",
+        row_order = row_od,
+        column_names_side = "top", row_names_gp = gpar(fontface = "italic"),
+        width = unit(17, "cm"), height = unit(10, "cm"),
+        right_annotation = ha, top_annotation = ht,
+        border = TRUE, rect_gp = gpar(col = "grey"))
+decorate_annotation("foo", slice = 1, {
+    grid.rect(x = 0, width = unit(10, "mm"), gp = gpar(fill = NA, col = NA), just = "left")
+    grid.text(paste("Fetal", collapse = "\n"), x = unit(5, "mm"), just = "centre", rot = 90,
+              gp = gpar(fontsize = 13, fontface = "bold"))
+    })
+decorate_annotation("top", slice = 1, {
+    grid.rect(x = 0, width = unit(0.7, "mm"), gp = gpar(fill = NA, col = NA), just = "centre")
+    })
+#dev.off()
+
+## Adult cortex
+a_sh_effects <- read.table("results/shared_genes/a_effects_on_shared_effect_size.txt", sep = "\t",
+                           header=TRUE, row.names = 1)
+a_sh_pvalues <- read.table("results/shared_genes/a_effects_on_shared_pvalue.txt", sep = "\t",
+                           header=TRUE, row.names = 1)
+
+mat_a_effects <- as.matrix(a_sh_effects)
+ef_colors = colorRamp2(c(-1.5,0,1.5), c("blue", "#E8E8E8","red"), space = "RGB")
+
+ha = rowAnnotation(foo = anno_empty(border = TRUE))
+#ht = HeatmapAnnotation(top = anno_empty(border = FALSE))
+
+#pdf("figures/aa_shared_effect_heatmap.pdf", width = 14, height = 10)
+Heatmap(mat_a_effects, name = "log2(aFC)", #column_title = "eQTL SNPs",
+        col = ef_colors, na_col = "white", #row_title = "shared eGenes",
+        cluster_rows = FALSE, cluster_columns = FALSE, row_names_side = "left",
+        row_order = row_od,
+        column_names_side = "top", row_names_gp = gpar(fontface = "italic"),
+        width = unit(17, "cm"), height = unit(10, "cm"),
+        right_annotation = ha, #top_annotation = ht,
+        border = TRUE, rect_gp = gpar(col = "grey"))
+decorate_annotation("foo", slice = 1, {
+    grid.rect(x = 0, width = unit(10, "mm"), gp = gpar(fill = NA, col = NA), just = "left")
+    grid.text(paste("Adult", collapse = "\n"), x = unit(5, "mm"), just = "centre", rot = 90,
+              gp = gpar(fontsize = 13, fontface = "bold"))
+    })
+#decorate_annotation("top", slice = 1, {
+#    grid.rect(x = 0, width = unit(0.7, "mm"), gp = gpar(fill = NA, col = NA), just = "centre")
+#    })
+#dev.off()
+
+mat_a_pvalues <- as.matrix(a_sh_pvalues)
+pv_colors = colorRamp2(c(0,0.05), c("black","white"), space = "RGB")
+
+ha = rowAnnotation(foo = anno_empty(border = TRUE))
+#ht = HeatmapAnnotation(top = anno_empty(border = FALSE))
+
+#pdf("figures/aa_shared_pvalue_heatmap.pdf", width = 14, height = 10)
+Heatmap(mat_a_pvalues, name = "Adj pvalue", #column_title = "eQTL SNPs",
+        col = pv_colors, na_col = "white", #row_title = "shared eGenes",
+        cluster_rows = FALSE, cluster_columns = FALSE, row_names_side = "left",
+        row_order = row_od,
+        column_names_side = "top", row_names_gp = gpar(fontface = "italic"),
+        width = unit(17, "cm"), height = unit(10, "cm"),
+        right_annotation = ha, #top_annotation = ht,
+        border = TRUE, rect_gp = gpar(col = "grey"))
+decorate_annotation("foo", slice = 1, {
+    grid.rect(x = 0, width = unit(10, "mm"), gp = gpar(fill = NA, col = NA), just = "left")
+    grid.text(paste("Adult", collapse = "\n"), x = unit(5, "mm"), just = "centre", rot = 90,
+              gp = gpar(fontsize = 13, fontface = "bold"))
+    })
+#decorate_annotation("top", slice = 1, {
+#    grid.rect(x = 0, width = unit(0.7, "mm"), gp = gpar(fill = NA, col = NA), just = "centre")
+#    })
+#dev.off()
+```
 
 
