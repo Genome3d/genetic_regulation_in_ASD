@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("pacman")
 # load libraries
 pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2, RColorBrewer,
-               ComplexHeatmap, circlize)
+               ComplexHeatmap, circlize, EnsDb.Hsapiens.v86)
 
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
@@ -464,7 +464,7 @@ numOverlaps(f_eqtls, randomizeRegions(f_chromhmm), genome="hg38", count.once=TRU
 f_pt <- overlapPermTest(A=f_eqtls, B=f_chromhmm, ntimes=1000, genome="hg38",
                         mc.set.seed=FALSE, force.parallel=TRUE, count.once=TRUE)
 f_pt # P-value: 0.000999000999000999. The test was significant, with a p-value < 0.001.
-plot(f_pt)
+#plot(f_pt)
 
 # test if eQTLs overlap with ChromHMM ReprPCWk regions more than expected; 1000 permutations
 f_ReprPCWk_reg <- f_chromhmm[f_chromhmm@elementMetadata@listData[["name"]]=="14_ReprPCWk"]
@@ -472,7 +472,7 @@ set.seed(1234)
 f_pt <- overlapPermTest(A=f_eqtls, B=f_ReprPCWk_reg, ntimes=1000, genome="hg38",
                         mc.set.seed=FALSE, force.parallel=TRUE, count.once=TRUE)
 f_pt # P-value: 0.000999000999000999 The test was significant, with a p-value < 0.001.
-plot(f_pt)
+#plot(f_pt)
 
 # test if eQTLs overlap with ChromHMM ReprPC regions more than expected; 1000 permutations
 f_ReprPC_reg <- f_chromhmm[f_chromhmm@elementMetadata@listData[["name"]]=="13_ReprPC"]
@@ -480,7 +480,7 @@ set.seed(1234)
 f_pt <- overlapPermTest(A=f_eqtls, B=f_ReprPC_reg, ntimes=1000, genome="hg38",
                         mc.set.seed=FALSE, force.parallel=TRUE, count.once=TRUE)
 f_pt # P-value: 0.000999000999000999 The test was significant, with a p-value < 0.001.
-plot(f_pt)
+#plot(f_pt)
 
 a <- read.table("results/chromHMM/aa-cortex_eqtl_snps_E073.bed")
 a <- distinct(a[, c("V1", "V2", "V3", "V8")])
@@ -495,7 +495,7 @@ numOverlaps(a_eqtls, randomizeRegions(a_chromhmm), genome="hg38", count.once=TRU
 a_pt <- overlapPermTest(A=a_eqtls, B=a_chromhmm, ntimes=1000, genome="hg38",
                         mc.set.seed=FALSE, force.parallel=TRUE, count.once=TRUE)
 a_pt # P-value: 0.002997002997003. The test was significant, with a p-value < 0.005.
-plot(a_pt)
+#plot(a_pt)
 ```
 
 Finally, we evaluated identified eQTL associations with other phenotypes in the [GWAS Catalog](https://www.ebi.ac.uk/gwas/).
@@ -661,7 +661,7 @@ fetal <- read.table("results/codes3d/fetal_cortex/significant_eqtls.txt", header
 adult <- read.table("results/codes3d/adult_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
 
 # get shared genes
-shared_egenes <- intersect(fetal_egenes, adult_egenes)
+shared_egenes <- intersect(fetal_egenes, adult_egenes) # 15
 
 f_shared_egenes <- subset(fetal, fetal$gene %in% shared_egenes)
 #write.table(f_shared_egenes, file = "results/ff_sh_egene_eqtls.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
@@ -788,4 +788,164 @@ decorate_annotation("foo", slice = 1, {
 #dev.off()
 ```
 
+### 6. Protein-protein interactions (PPI) network analysis and vizualization.
 
+The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from [STRING website](https://string-db.org/cgi/download?sessionId=bBkmARm05QYT). We extracted only human PPIs with a combined score ≥ 400 between proteins:
+`zgrep ^"9606\." protein.links.full.v11.0.txt.gz | awk '($16 >= 400) { print $1, $2, $16 }' > human_PPIs.full.v11.0_400.txt`
+Overall, we extracted 1,000,278 PPIs between a total of 19,257 unique human proteins.
+
+```{r PPI_cleaning}
+# loading human PPI network
+
+
+```
+
+Ensembl protein (STRING) and transcript identifiers (adult and fetal cortex RNA-seq data) were mapped to Ensembl gene identifiers.
+
+```{r ID_mapping}
+# reading fetal and adult gene expression data (gene TPM counts)
+fetal_gene_exp <- read.table("data/fetal_brain.gene_tpm_median.txt")
+adult_gene_exp <- read.table("data/adult_brain.gene_tpm_median.txt")
+
+# extractiong only genes that have no missing values and minimum expression level > 0 TPM
+f_gene_exp <- subset(fetal_gene_exp, fetal_gene_exp$V3 > 0) # 33,710 expressed genes in fetal cortex
+a_gene_exp <- subset(adult_gene_exp, adult_gene_exp$V3 > 0) # 29,560 expressed genes in adult cortex
+colnames(f_gene_exp) <- c("gene_id", "gene_name", "tpm")
+colnames(a_gene_exp) <- c("gene_id", "gene_name", "tpm")
+
+# converting transcript IDs to gene IDs
+f_gene_exp$gene_id <- gsub("\\..*","", f_gene_exp$gene_id)
+a_gene_exp$gene_id <- gsub("\\..*","", a_gene_exp$gene_id)
+
+# querying protein features
+edb <- EnsDb.Hsapiens.v86
+#hasProteinData(edb) # TRUE
+#listTables(edb)
+
+# getting protein information for gene IDs
+f_protein_ids <- genes(edb, filter = ~ gene_id %in% f_gene_exp$gene_id,
+                       columns = c("protein_id", "gene_name"))
+f_df <- bind_rows(f_protein_ids@elementMetadata@listData)
+#write.table(f_df, file = "results/string/fetal_protein_ids.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+a_protein_ids <- genes(edb, filter = ~ gene_id %in% a_gene_exp$gene_id,
+                       columns = c("protein_id", "gene_name"))
+a_df <- bind_rows(a_protein_ids@elementMetadata@listData)
+#write.table(a_df, file = "results/string/adult_protein_ids.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+
+
+
+
+
+```
+
+
+```{r network_analysis}
+
+
+```
+
+
+
+
+### ?. Bootstrapping analysis
+
+```{r bootstrapping_snps}
+# Bootrstrapping function accepts the two vectors of phenotype-specific snps, the reference set of snps (e.g. all GWAS snps), the actual observed overlap, and the number of bootstraps to perform (usually 10,000). It returns a bootstrapping p value for the overlap.
+snps_bootstrapping <- function(input_1, input_2, reference_snps, act_overlap, num) {
+    # resample snps from the reference set
+    resampled_1 <- lapply(1:num, function(i) sample(reference_snps, length(input_1),
+                                                  replace=TRUE))
+    resampled_2 <- lapply(1:num, function(i) sample(reference_snps, length(input_2),
+                                                  replace=TRUE))
+    # get number of overlaps between new sets of snps
+    overlap_num <- mapply(function(x, y) {
+        intersect(x, y)
+        }, x=resampled_1, y=resampled_2)
+    # count instances that have overlaps more or equal to actual overlap
+    actual_overlaps <- c()
+    for (i in 1:length(overlap_num)){
+        if (length(overlap_num[[i]]) >= act_overlap){
+            actual_overlaps <- append(actual_overlaps, length(overlap_num[[i]]))
+        }
+    }
+    # calculate bootstrapping p value
+    p_value <- sum(actual_overlaps)/num
+    #list(p_value=p_value, resampled_1=resampled_1, resampled_2=resampled_2,
+         #overlap_num=overlap_num,
+         #actual_overlaps=actual_overlaps)
+    p_value
+}
+
+# Testing
+input_1 <- LETTERS[1:5]
+input_2 <- LETTERS[1:2]; input_2 <- append(input_2,rev(LETTERS)[1:3])
+reference_snps <- LETTERS
+act_overlap <- 1
+num <- 10
+snps_bootstrapping(input_1, input_2, reference_snps, act_overlap, num)
+
+# Bootstrapping analysis between ASD and SCZ snps
+setwd("/Volumes/resmed201800011-foffa/P5_fetal_vs_adult_brain_ASD/results/annotation/gwas_associations")
+asd_f_snps <- readLines("ff-cortex_eqtl_snps.txt") # should be 80
+asd_a_snps <- readLines("aa-cortex_eqtl_snps.txt") # should be 58
+gwas.df <- read.table("all_gwas_snps_5E-08_true_snpsfixed_traitfixed_header_copy_newids_copy.txt",
+                      header = FALSE, sep = "\t") # should be 151741
+gwas_snps <- unique(gwas.df$V4) # should be 78183
+scz <- gwas.df[gwas.df$V3 == "schizophrenia",]; scz_snps <- unique(scz$V4) # should be 1225
+
+options(digits=3)
+set.seed(1234)
+# ASD and SCZ
+snps_bootstrapping(asd_f_snps, scz_snps, gwas_snps, 78, 10000) # should be 0
+snps_bootstrapping(asd_a_snps, scz_snps, gwas_snps, 57, 10000) # should be 0
+```
+
+```{r bootstrapping_egenes}
+# Bootrstrapping function accepts the number of egenes-associated with ASD, the reference set 1 of egenes (e.g. all egenes), the reference set 2 (AutDB genes), the actual observed overlap, and the number of bootstraps to perform (usually 10,000). It returns a bootstrapping p value for the overlap.
+egenes_bootstrapping <- function(in1, ref_1, ref_2, act_overlap, num) {
+    # resample snps from the reference set
+    resampled_1 <- lapply(1:num, function(i) sample(ref_1, in1,
+                                                  replace=TRUE))
+    # make 10000 bootstraps of AutDB
+    resampled_2 <- rep(list(ref_2), num)
+    # get number of overlaps between new sets of snps
+    overlap_num <- mapply(function(x, y) {
+        intersect(x, y)
+        }, x=resampled_1, y=resampled_2)
+    # count instances that have overlaps more or equal to actual overlap
+    actual_overlaps <- c()
+    for (i in 1:length(overlap_num)){
+        if (length(overlap_num[[i]]) >= act_overlap){
+            actual_overlaps <- append(actual_overlaps, length(overlap_num[[i]]))
+        }
+    }
+    # calculate bootstrapping p value
+    p_value <- sum(actual_overlaps)/num
+    #list(p_value=p_value, resampled_1=resampled_1, resampled_2=resampled_2,
+         #overlap_num=overlap_num,
+         #actual_overlaps=actual_overlaps)
+    p_value
+}
+
+# Testing
+input_1 <- LETTERS[1:5]
+reference1 <- LETTERS
+reference2 <- rev(LETTERS)[1:3]
+act_overlap <- 1
+num <- 10
+egenes_bootstrapping(5, reference1, reference2, act_overlap, num)
+
+# Bootstrapping analysis between ASD and SCZ snps
+setwd("/Volumes/resmed201800011-foffa/P5_fetal_vs_adult_brain_ASD/results/AutDB")
+asd_f_genes <- readLines("ff-cortex_egenes.txt") # should be 81
+asd_a_genes <- readLines("aa-cortex_egenes.txt") # should be 44
+all_genes.df <- readLines("all_genes.txt") # should be 54592
+autdb_genes <- readLines("AutDB_genes.txt") # should be 1237
+
+options(digits=3)
+set.seed(1234)
+# Fetal genes and AutDB
+egenes_bootstrapping(81, all_genes.df, autdb_genes, 8, 10000) # 0.0017
+# Adult genes and AutDB
+egenes_bootstrapping(44, all_genes.df, autdb_genes, 7, 10000) # 7e-04 or 0.0007
+```
