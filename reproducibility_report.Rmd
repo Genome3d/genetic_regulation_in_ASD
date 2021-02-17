@@ -611,6 +611,54 @@ ggplot(fetal_eqtls.df, aes(x = factor(gwas, level=rev(f_order)), y = number, fil
 #dev.off()
 ```
 
+Bootstrapping analysis (n=10,000 iterations) was performed to test if observed overlaps were non-random. These overlaps were statistically significant (bootstrapping, p < 0.01, n=10,000).
+
+```{r bootstrapping_snps}
+# Bootrstrapping function accepts the two vectors of phenotype-specific snps, the reference set of snps (e.g. all GWAS snps), the actual observed overlap, and the number of bootstraps to perform (usually 10,000). It returns a bootstrapping p value for the overlap.
+snps_bootstrapping <- function(input_1, input_2, reference_snps, act_overlap, num) {
+    # resample snps from the reference set
+    resampled_1 <- lapply(1:num, function(i) sample(reference_snps, length(input_1),
+                                                  replace=TRUE))
+    resampled_2 <- lapply(1:num, function(i) sample(reference_snps, length(input_2),
+                                                  replace=TRUE))
+    # get number of overlaps between new sets of snps
+    overlap_num <- mapply(function(x, y) {
+        intersect(x, y)
+        }, x=resampled_1, y=resampled_2)
+    # count instances that have overlaps more or equal to actual overlap
+    actual_overlaps <- c()
+    for (i in 1:length(overlap_num)){
+        if (length(overlap_num[[i]]) >= act_overlap){
+            actual_overlaps <- append(actual_overlaps, length(overlap_num[[i]]))
+        }
+    }
+    # calculate bootstrapping p value
+    p_value <- sum(actual_overlaps)/num
+    p_value
+}
+
+# Testing
+#input_1 <- LETTERS[1:5]
+#input_2 <- LETTERS[1:2]; input_2 <- append(input_2,rev(LETTERS)[1:3])
+#reference_snps <- LETTERS
+#act_overlap <- 1
+#num <- 10
+#snps_bootstrapping(input_1, input_2, reference_snps, act_overlap, num)
+
+# Bootstrapping analysis between ASD and SCZ snps
+fetal_eqtls <- unique(fetal$snp) # 80
+adult_eqtls <- unique(adult$snp) # 58
+gwas_snps <- unique(merged$snp) # 78166
+scz <- merged[merged$mapped_trait == "schizophrenia",] # 1224
+scz_snps <- unique(scz$snp) # should be 1224
+
+options(digits=3)
+set.seed(1234)
+# ASD and SCZ (78 snps in fetal and 57 snp sin adult cortical tissues)
+snps_bootstrapping(fetal_eqtls, scz_snps, gwas_snps, 78, 10000) # should be 0
+snps_bootstrapping(adult_eqtls, scz_snps, gwas_snps, 57, 10000) # should be 0
+```
+
 ### 4. Loss-of-function analysis.
 
 ```{r LoF}
@@ -792,13 +840,14 @@ decorate_annotation("foo", slice = 1, {
 
 The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from [STRING website](https://string-db.org/cgi/download?sessionId=bBkmARm05QYT). We extracted only human PPIs with a combined score ≥ 400 between proteins:
 `zgrep ^"9606\." protein.links.full.v11.0.txt.gz | awk '($16 >= 400) { print $1, $2, $16 }' > human_PPIs.full.v11.0_400.txt`
-Overall, we extracted 1,000,278 PPIs between a total of 19,257 unique human proteins.
 
 ```{r PPI_cleaning}
 # loading human PPI network
 
 
 ```
+
+Overall, we extracted 1,000,278 PPIs between a total of 19,257 unique human proteins.
 
 Ensembl protein (STRING) and transcript identifiers (adult and fetal cortex RNA-seq data) were mapped to Ensembl gene identifiers.
 
@@ -832,6 +881,11 @@ a_protein_ids <- genes(edb, filter = ~ gene_id %in% a_gene_exp$gene_id,
 a_df <- bind_rows(a_protein_ids@elementMetadata@listData)
 #write.table(a_df, file = "results/string/adult_protein_ids.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
 
+# getting only protein and gene IDs and removing protein-gene pairs containing NAs
+f_df <- f_df[, c("protein_id", "gene_name")]
+a_df <- a_df[, c("protein_id", "gene_name")]
+f_df <- f_df[complete.cases(f_df), ] # 87,065 proteins
+a_df <- a_df[complete.cases(a_df), ] # 89,492 proteins
 
 
 
@@ -848,57 +902,6 @@ a_df <- bind_rows(a_protein_ids@elementMetadata@listData)
 
 
 ### ?. Bootstrapping analysis
-
-```{r bootstrapping_snps}
-# Bootrstrapping function accepts the two vectors of phenotype-specific snps, the reference set of snps (e.g. all GWAS snps), the actual observed overlap, and the number of bootstraps to perform (usually 10,000). It returns a bootstrapping p value for the overlap.
-snps_bootstrapping <- function(input_1, input_2, reference_snps, act_overlap, num) {
-    # resample snps from the reference set
-    resampled_1 <- lapply(1:num, function(i) sample(reference_snps, length(input_1),
-                                                  replace=TRUE))
-    resampled_2 <- lapply(1:num, function(i) sample(reference_snps, length(input_2),
-                                                  replace=TRUE))
-    # get number of overlaps between new sets of snps
-    overlap_num <- mapply(function(x, y) {
-        intersect(x, y)
-        }, x=resampled_1, y=resampled_2)
-    # count instances that have overlaps more or equal to actual overlap
-    actual_overlaps <- c()
-    for (i in 1:length(overlap_num)){
-        if (length(overlap_num[[i]]) >= act_overlap){
-            actual_overlaps <- append(actual_overlaps, length(overlap_num[[i]]))
-        }
-    }
-    # calculate bootstrapping p value
-    p_value <- sum(actual_overlaps)/num
-    #list(p_value=p_value, resampled_1=resampled_1, resampled_2=resampled_2,
-         #overlap_num=overlap_num,
-         #actual_overlaps=actual_overlaps)
-    p_value
-}
-
-# Testing
-input_1 <- LETTERS[1:5]
-input_2 <- LETTERS[1:2]; input_2 <- append(input_2,rev(LETTERS)[1:3])
-reference_snps <- LETTERS
-act_overlap <- 1
-num <- 10
-snps_bootstrapping(input_1, input_2, reference_snps, act_overlap, num)
-
-# Bootstrapping analysis between ASD and SCZ snps
-setwd("/Volumes/resmed201800011-foffa/P5_fetal_vs_adult_brain_ASD/results/annotation/gwas_associations")
-asd_f_snps <- readLines("ff-cortex_eqtl_snps.txt") # should be 80
-asd_a_snps <- readLines("aa-cortex_eqtl_snps.txt") # should be 58
-gwas.df <- read.table("all_gwas_snps_5E-08_true_snpsfixed_traitfixed_header_copy_newids_copy.txt",
-                      header = FALSE, sep = "\t") # should be 151741
-gwas_snps <- unique(gwas.df$V4) # should be 78183
-scz <- gwas.df[gwas.df$V3 == "schizophrenia",]; scz_snps <- unique(scz$V4) # should be 1225
-
-options(digits=3)
-set.seed(1234)
-# ASD and SCZ
-snps_bootstrapping(asd_f_snps, scz_snps, gwas_snps, 78, 10000) # should be 0
-snps_bootstrapping(asd_a_snps, scz_snps, gwas_snps, 57, 10000) # should be 0
-```
 
 ```{r bootstrapping_egenes}
 # Bootrstrapping function accepts the number of egenes-associated with ASD, the reference set 1 of egenes (e.g. all egenes), the reference set 2 (AutDB genes), the actual observed overlap, and the number of bootstraps to perform (usually 10,000). It returns a bootstrapping p value for the overlap.
