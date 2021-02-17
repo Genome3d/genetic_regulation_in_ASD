@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # install.packages("pacman")
 # load libraries
-pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2)
+pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2, RColorBrewer)
 
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
@@ -608,6 +608,46 @@ ggplot(fetal_eqtls.df, aes(x = factor(gwas, level=rev(f_order)), y = number, fil
     ylab("Number of eQTL SNPs") + 
     coord_flip()
 #dev.off()
+```
+
+### 4. Loss-of-function analysis.
+
+```{r LoF}
+# read significant interactions in fetal and adult cortical tissues
+fetal <- read.table("results/codes3d/fetal_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
+adult <- read.table("results/codes3d/adult_cortex/significant_eqtls.txt", header = TRUE, sep = "\t")
+
+# read gnomad file
+gnomad <- read.table(gzfile('data/gnomad.v2.1.1.lof_metrics.by_gene.txt.bgz','rt'), header = TRUE,
+                       sep="\t")
+
+gene_list <- fetal[, c("gene", "interaction_type", "snp", "log2_aFC")]
+gnomad <- gnomad[, c("gene", "pLI")]
+
+gnomad_pheno <- gnomad %>%
+    mutate(intolerant=ifelse(pLI>=0.9, "Intolerant", "Tolerant")) %>% 
+	mutate(intolerant=ifelse(is.na(intolerant),"nopli",intolerant)) %>% 
+	full_join(gene_list) %>% 
+	mutate(interaction_type=ifelse(is.na(interaction_type),"non-eQTL",interaction_type)) %>% 
+	mutate(interaction_type=factor(interaction_type,
+	                               levels=c("non-eQTL","Cis","Trans-intrachromosomal",
+	                                        "Trans-interchromosomal")))
+#write.table(gnomad_pheno, file = "results/LoF/fetal_LoF.txt", sep = "\t", col.names = TRUE,
+#            row.names=FALSE)
+
+gene_list <- adult[, c("gene", "interaction_type", "snp", "log2_aFC")]
+gnomad <- gnomad[, c("gene", "pLI")]
+
+gnomad_pheno <- gnomad %>%
+    mutate(intolerant=ifelse(pLI>=0.9, "Intolerant", "Tolerant")) %>% 
+	mutate(intolerant=ifelse(is.na(intolerant),"nopli",intolerant)) %>% 
+	full_join(gene_list) %>% 
+	mutate(interaction_type=ifelse(is.na(interaction_type),"non-eQTL",interaction_type)) %>% 
+	mutate(interaction_type=factor(interaction_type,
+	                               levels=c("non-eQTL","Cis","Trans-intrachromosomal",
+	                                        "Trans-interchromosomal")))
+#write.table(gnomad_pheno, file = "results/LoF/adult_LoF.txt", sep = "\t", col.names = TRUE,
+#            row.names=FALSE)
 ```
 
 
