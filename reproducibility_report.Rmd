@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # install.packages("pacman")
 # load libraries
-pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer)
+pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2)
 
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
@@ -443,7 +443,7 @@ ggplot(reprPCWk.df, aes(x = factor(a_chromhmm_state, level=x_order), y = snps)) 
 
 ChromHMM enrichment analysis was performed using R package [regioneR](https://www.bioconductor.org/packages/devel/bioc/vignettes/regioneR/inst/doc/regioneR.html) (permutation test: 1000).
 
-```{r permutation_test, fig.width=9, fig.height=5}
+```{r permutation_test, fig.width=9, fig.height=5, cache=TRUE}
 # loading ChromHMM files
 f <- gzfile("data/E081_15_coreMarks_hg38lift_mnemonics.bed.gz")
 f_chromhmm <- import(f, format = "BED")
@@ -499,9 +499,115 @@ plot(a_pt)
 
 Finally, we evaluated identified eQTL associations with other phenotypes in the [GWAS Catalog](https://www.ebi.ac.uk/gwas/).
 
-```{r gwas_associations}
+```{r gwas_cleaning}
+# loading gwas associations
+gwas <- gzfile("data/gwas_catalog_v1.0.2-associations_e100_r2020-08-26.tsv.gz",'rt')
+gwas_assoc <- read.delim(gwas, header = TRUE, quote= "") # 197,439 associations
 
+# subsetting
+#gwas_assoc_sub <- subset(gwas_assoc, select=c(CHR_ID, SNPS, CONTEXT, P.VALUE, MAPPED_TRAIT))
+gwas_assoc_sub <- subset(gwas_assoc, select=c(SNPS, P.VALUE, MAPPED_TRAIT))
+colnames(gwas_assoc_sub) <- c("snp", "p_value", "mapped_trait")
+gwas_assoc_sub <- subset(gwas_assoc_sub, p_value < 0.00000005)
+rs <- grep("^rs", gwas_assoc_sub$snp) # removing SNPs that don't have rs IDs
+gwas_assoc_sub <- subset(gwas_assoc_sub, snp %in% snp[rs])
+x <- grep(" x ", gwas_assoc_sub$snp) # removing SNPs that have "x" in IDs
+gwas_assoc_sub <- subset(gwas_assoc_sub, !(snp %in% snp[x]))
+y <- grep("\\-", gwas_assoc_sub$snp) # removing SNPs that have "-" in IDs
+gwas_assoc_sub <- subset(gwas_assoc_sub, !(snp %in% snp[y]))
+y <- grep("\\_", gwas_assoc_sub$snp) # removing SNPs that have "_" in IDs
+gwas_assoc_sub <- subset(gwas_assoc_sub, !(snp %in% snp[y]))
+y <- grep("\\*", gwas_assoc_sub$snp) # removing SNPs that have "*" in IDs
+gwas_assoc_sub <- subset(gwas_assoc_sub, !(snp %in% snp[y]))
+y <- grep("\\/", gwas_assoc_sub$snp) # removing SNPs that have "/" in IDs
+gwas_assoc_sub <- subset(gwas_assoc_sub, !(snp %in% snp[y]))
+y <- c("rs12524487¬†", "rs2428362‚Ä†")
+gwas_assoc_sub <- subset(gwas_assoc_sub, !(snp %in% snp[y])) # removing wierdos
 
+gwas_assoc_uniq <- distinct(gwas_assoc_sub) # getting only unique associations
+write.table(gwas_assoc_uniq, file = "results/gwas/gwas_5E-08.txt", sep = "\t", col.names = TRUE, row.names=FALSE) # write them
+```
+
+We used `python scripts/fix_snps.py` to split the lines with snps separated by ";". 
+We run `python scripts/fix_traits.py` to split the mapped traits by ", " to preserve single snp - single trait relationship.
+Next, we run `python scripts/fix_ids.py` to remap merged old rsIDs into a new rsIDs. The  [RsMergeArch.bcp.gz file](ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606_b151_GRCh38p7/database/organism_data/RsMergeArch.bcp.gz) with rs merge table for genome GRCh38p7 build 151 was downloaded from the [dbSNP ftp site](ftp://ftp.ncbi.nlm.nih.gov/snp/organisms/human_9606_b151_GRCh38p7/database/organism_data/) on 27/08/2020.
+
+```{r unique_snp_trait_pairs}
+gwas_st_pairs <- read.table("results/gwas/gwas_5E-08_snpsfixed_traitfixed_idfixed.txt", sep = "\t", header = TRUE, quote= "") # 149,096 gwas snp-trait pairs
+gwas_st_pairs_uniq <- subset(gwas_st_pairs, select=c(snp.1, mapped_trait)) %>% distinct() # 111,172 unique snp-trait pairs
+writeLines(gwas_st_pairs_uniq$snp.1, con = "results/gwas/gwas_5E-08_snps.txt", sep = "\n")
+```
+
+To get genomic positions for GWAS SNPs according to genome GRCh38p7 build 151, we downloaded dbSNP bed files for each chromosome from [dbSNP ftp site](ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b151_GRCh38p7/BED/), concatenated them and run `bash scripts/rsID2Bed.sh results/gwas/gwas_5E-08_snps.txt`
+
+```{r unique_snp_trait_pairs_with_positions}
+colnames(gwas_st_pairs_uniq) <- c("snp", "mapped_trait")
+gwas_st_pairs_uniq_pos <- read.table("results/gwas/rsID2Bed/gwas_5E-08_snps.txt.bed", sep = "\t", header = FALSE, quote= "")
+colnames(gwas_st_pairs_uniq_pos) <- c("chr", "start", "end", "snp", "score", "strand")
+# merge two tables by snp rsID
+gwas_st_pairs_uniq_pos <- distinct(gwas_st_pairs_uniq_pos)
+merged <- merge(gwas_st_pairs_uniq, gwas_st_pairs_uniq_pos, by = "snp")
+```
+
+We overlapped GWAS SNPs with fetal and adult eQTLs to identify how many eQTLs have an association with GWAS traits.
+
+```{r gwas_associations, fig.width=9, fig.height=6}
+f_assoc <- merged[merged$snp %in% fetal_eqtls, ]
+a_assoc <- merged[merged$snp %in% adult_eqtls, ]
+
+f_melt <- melt(f_assoc, id="snp", measure.vars = "mapped_trait")
+f_traits <- dcast(f_melt, value ~ variable) # 37 GWAS traits
+
+a_melt <- melt(a_assoc, id="snp", measure.vars = "mapped_trait")
+a_traits <- dcast(a_melt, value ~ variable) # 28 GWAS traits
+
+# Adult eQTLs
+a_order <- c("autism spectrum disorder ", "schizophrenia ", "unipolar depression ", "attention deficit hyperactivity disorder ", "bipolar disorder ", "anorexia nervosa ", "obsessive-compulsive disorder ", "Tourette syndrome ", "intelligence ", "self reported educational attainment ")
+
+adult_eqtls.df <- data.frame(
+    gwas = a_order,
+    number = c(58, 57, 26, 24, 24, 21, 21, 21, 3, 3))
+
+#pdf("figures/adult_gwas_assoc_top10.pdf", width = 10, height = 7)
+ggplot(adult_eqtls.df, aes(x = factor(gwas, level=rev(a_order)), y = number, fill = "#92278F")) +
+    geom_bar(stat="identity", position = "dodge") + 
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.y = element_blank(),
+          legend.position = "none",
+          axis.text=element_text(size=14, colour = "black"),
+          axis.title=element_text(size=16, colour = "black")) +
+    scale_fill_manual(values = "#92278F") +
+    geom_text(aes(y = number, label = paste0("n=", number)), position=position_dodge(width=0.9),
+              vjust = 0.25, hjust = -0.25, color = "black", size = 5) + 
+    scale_y_continuous(limits = c(0, 60)) +
+    ylab("Number of eQTL SNPs") + 
+    coord_flip()
+#dev.off()
+
+# Fetal eQTLs
+f_order <- c("autism spectrum disorder ", "schizophrenia ", "unipolar depression ", "attention deficit hyperactivity disorder ", "bipolar disorder ", "anorexia nervosa ", "obsessive-compulsive disorder ", "Tourette syndrome ", "intelligence ", "self reported educational attainment ")
+
+fetal_eqtls.df <- data.frame(
+    gwas = f_order,
+    number = c(79, 78, 32, 30, 30, 24, 24, 24, 5, 4))
+
+#pdf("figures/fetal_gwas_assoc_top10.pdf", width = 10, height = 7)
+ggplot(fetal_eqtls.df, aes(x = factor(gwas, level=rev(f_order)), y = number, fill = "#009444")) +
+    geom_bar(stat="identity", position = "dodge") + 
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          axis.title.y = element_blank(),
+          legend.position = "none",
+          axis.text=element_text(size=14, colour = "black"),
+          axis.title=element_text(size=16, colour = "black")) +
+    scale_fill_manual(values = "#009444") +
+    geom_text(aes(y = number, label = paste0("n=", number)), position=position_dodge(width=0.9),
+              vjust = 0.25, hjust = -0.25, color = "black", size = 5) + 
+    scale_y_continuous(limits = c(0, 85)) +
+    ylab("Number of eQTL SNPs") + 
+    coord_flip()
+#dev.off()
 ```
 
 
