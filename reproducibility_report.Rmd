@@ -110,10 +110,10 @@ shared_noneqtls <- intersect(asd_snps[!(asd_snps %in% fetal_eqtls)],
                              asd_snps[!(asd_snps %in% adult_eqtls)]) # 236
 
 shared.df <- data.frame(
-  snps = rep(c("eQTL","non-eQTL")),
-  number = c(length(shared_eqtls), length(shared_noneqtls)),
-  percentage = c(round(length(shared_eqtls)/length(asd_snps)*100, 2), 
-                 round(length(shared_noneqtls)/length(asd_snps)*100, 2)))
+    snps = rep(c("eQTL","non-eQTL")),
+    number = c(length(shared_eqtls), length(shared_noneqtls)),
+    percentage = c(round(length(shared_eqtls)/length(asd_snps)*100, 2), 
+                   round(length(shared_noneqtls)/length(asd_snps)*100, 2)))
 
 #pdf("figures/shared_eQTL_and_non-eQTL.pdf", width = 5, height = 9)
 ggplot(shared.df, aes(x = snps, y = percentage, fill = "#A9A9A9")) +
@@ -1054,46 +1054,14 @@ Top 10 biological processes for fetal and adult cortex-specific genes associated
 #write.table(a_gos.df, file = "results/go/a_nohla_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 a_gos.df <- read.table("results/go/a_nohla_all_gos_fdr.txt", header = TRUE, sep="\t")
 a_bp <- a_gos.df[grep('GO:BP', a_gos.df[, "source"]), ]
-a_bp_top10 <- as.data.frame(a_bp[1:10,])
-
-#pdf("figures/a_bp_top10_nohla.pdf", width = 10, height = 7)
-ggplot(a_bp_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
-                       y=-log10(as.numeric(p_value)), fill="#92278F")) +
-    geom_bar(stat="identity") +
-    theme_classic() +
-    theme(plot.title = element_blank(),
-          axis.title.x = element_text(size=14, colour = "black"),
-          axis.text=element_text(size=14, colour = "black"),
-          axis.title.y = element_blank(),
-          legend.position = "none") +
-    scale_fill_manual(values=c("#92278F")) +
-    labs(y = "-log10(p)") +
-    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
-    coord_flip()
-#dev.off()
+#write.table(a_bp, file = "results/go/a_bp_nohla_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 
 #f_egenes_nohla <- readLines("results/go/fetal_egenes_nohla.txt")
 #f_go <- query_go(f_egenes_nohla); f_gos.df <- apply(f_go, 2, as.character)
 #write.table(f_gos.df, file = "results/go/f_nohla_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 f_gos.df <- read.table("results/go/f_nohla_all_gos_fdr.txt", header = TRUE, sep="\t")
 f_bp <- f_gos.df[grep('GO:BP', f_gos.df[, "source"]), ]
-f_bp_top10 <- as.data.frame(f_bp[1:8,])
-
-#pdf("figures/f_bp_top10_nohla.pdf", width = 10, height = 7)
-ggplot(f_bp_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)))),
-                       y=-log10(as.numeric(p_value)), fill="#009444")) +
-    geom_bar(stat="identity") +
-    theme_classic() +
-    theme(plot.title = element_blank(),
-          axis.title.x = element_text(size=14, colour = "black"),
-          axis.text=element_text(size=14, colour = "black"),
-          axis.title.y = element_blank(),
-          legend.position = "none") +
-    scale_fill_manual(values=c("#009444")) +
-    labs(y = "-log10(p)") +
-    geom_hline(aes(yintercept=-log10(as.numeric(0.05))), colour = "red", size = 1) +
-    coord_flip()
-#dev.off()
+#write.table(f_bp, file = "results/go/f_bp_nohla_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 ```
 
 ### 8. Protein-protein interactions (PPI) network analysis and vizualization.
@@ -1190,21 +1158,26 @@ for(f in 1:nrow(f_PPI_400)){
         f_csppi.df <- rbind(f_csppi.df, t)
     }
 }
-f_final <- distinct(f_csppi.df)
-#write.table(f_final, file = "results/string/fetal_CSPPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
-f_final <- read.table(gzfile("results/string/fetal_CSPPI_400.txt"), header = FALSE, sep = "\t")
+
+f_csppi.df <- data.frame()
+for(f in 1:nrow(f_PPI_400)){
+    p1 <- f_PPI_400[f,][1]; p2 <- f_PPI_400[f,][2]
+    t <- c(f_dict[p1$V1], f_dict[p2$V2])
+    f_csppi.df <- rbind(f_csppi.df, t)
+    }
+f_csppi.df <- distinct(f_csppi.df)
+#write.table(f_csppi.df, file = "results/string/fetal_CSPPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+f_csppi.df <- read.table(gzfile("results/string/fetal_CSPPI_400.txt"), header = FALSE, sep = "\t")
 
 a_csppi.df <- data.frame()
 for(a in 1:nrow(a_PPI_400)){
-    if((a_PPI_400[a,][1] %in% names(a_dict)) & (a_PPI_400[a,][2] %in% names(a_dict))){
-        p1 <- a_PPI_400[a,][1]; p2 <- a_PPI_400[a,][2]
-        t <- c(a_dict[p1$V1], a_dict[p2$V2])
-        a_csppi.df <- rbind(a_csppi.df, t)
+    p1 <- a_PPI_400[a,][1]; p2 <- a_PPI_400[a,][2]
+    t <- c(a_dict[p1$V1], a_dict[p2$V2])
+    a_csppi.df <- rbind(a_csppi.df, t)
     }
-}
-a_final <- distinct(a_csppi.df)
-#write.table(a_final, file = "results/string/adult_CSPPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
-a_final <- read.table(gzfile("results/string/adult_CSPPI_400.txt"), header = FALSE, sep = "\t")
+a_csppi.df <- distinct(a_csppi.df)
+#write.table(a_csppi.df, file = "results/string/adult_CSPPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+a_csppi.df <- read.table(gzfile("results/string/adult_CSPPI_400.txt"), header = FALSE, sep = "\t")
 ```
 
 We used
