@@ -4,7 +4,7 @@ This repository contains scripts, data, results, figures and reproducibility rep
 
 Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were used for data processing, analysis and visualisation.  
 
-1. Fetal brain cortical plate and germinal zone neuron Hi-C data are available via the [dbGaP](https://www.ncbi.nlm.nih.gov/gap/) (accession: phs001190.v1.p1). Adult dorsolateral prefrontal cortex cells Hi-C data is available on [GEO](https://www.ncbi.nlm.nih.gov/geo/) (accession: GSE87112).  
+1. Fetal brain cortical plate and germinal zone neuron Hi-C data are available via the [dbGaP](https://www.ncbi.nlm.nih.gov/gap/) (accession: phs001190.v1.p1). Adult dorsolateral prefrontal cortex Hi-C data is available on [GEO](https://www.ncbi.nlm.nih.gov/geo/) (accession: GSE87112).  
 2. Total RNA-seq and WGS datasets across GTEx v8 tissues are available via the [dbGaP](https://www.ncbi.nlm.nih.gov/gap/) (accession: phs000424.v8.p2). Total RNA-seq and genotyping datasets for fetal brain cortical tissue from 14-21 postconceptional weeks (PCWs) are available via the dbGaP (https://www.ncbi.nlm.nih.gov/gap/) (accession: phs001900.v1.p1).  
 3. Human genome build hg38 release 75 (GRCh38) (Homo_sapiens_assembly38_noALT_noHLA_noDecoy.fasta) was downloaded from [gs://gtex-resources](https://console.cloud.google.com/storage/browser/gtex-resources/references).  
 4. SNP genomic positions for genome GRCh38p7 build 151 were obtained from ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b151_GRCh38p7.  
