@@ -28,7 +28,8 @@ Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were us
 5. Gene annotations for GENCODE v26 (gencode.v26.GRCh38.genes.gtf) were downloaded from [gs://gtex-resources](https://console.cloud.google.com/storage/browser/gtex-resources/references).
 6. Roadmap Epigenomics Project 15-state ChromHMM models for adult dorsolateral prefrontal cortex (E073_15_coreMarks_hg38lift_mnemonics.bed.gz) and fetal brain (E081_15_coreMarks_hg38lift_mnemonics.bed.gz) were downloaded from https://egg2.wustl.edu/roadmap/data/byFileType/chromhmmSegmentations/ChmmModels/coreMarks/jointModel/final/.
 7. GWAS SNP-trait associations (gwas_catalog_v1.0.2-associations_e100_r2020-08-26.tsv.gz) were downloaded from [GWAS Catalog](https://www.ebi.ac.uk/gwas/docs/file-downloads) on 26/08/2020.
-8. The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from https://string-db.org/.
+8. A curated list of 1,237 genes that had been previously implicated in autism development was downloaded from [AutDB](http://autism.mindspec.org/autdb/Welcome.do;jsessionid=9EC2C3BDD4F54A2223B757AE42B22E7A) (accessed on 16/11/2020).  
+9. The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from https://string-db.org/.  
 
 ### 1. Identification of significant spatial eQTL SNP-gene interactions using CoDeS3D.
 
@@ -618,9 +619,9 @@ Bootstrapping analysis (n=10,000 iterations) was performed to test if observed o
 snps_bootstrapping <- function(input_1, input_2, reference_snps, act_overlap, num) {
     # resample snps from the reference set
     resampled_1 <- lapply(1:num, function(i) sample(reference_snps, length(input_1),
-                                                  replace=TRUE))
+                                                    replace=TRUE))
     resampled_2 <- lapply(1:num, function(i) sample(reference_snps, length(input_2),
-                                                  replace=TRUE))
+                                                    replace=TRUE))
     # get number of overlaps between new sets of snps
     overlap_num <- mapply(function(x, y) {
         intersect(x, y)
@@ -1166,16 +1167,16 @@ Transcriptome-wide fetal and adult cortex-specific PPIs (CSPPIs) were constructe
 #subsetting PPIs that are present in fetal and adult cortical tissues
 f_PPI_400 <- subset(PPI_400, (PPI_400$V1 %in% f_df$protein_id & PPI_400$V2 %in% f_df$protein_id))
 #write.table(f_PPI_400, file = "results/string/fetal_PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
-f_unique_proteins <- unique(c(f_PPI_400$V1, f_PPI_400$V2)) # 16519
+f_unique_proteins <- unique(c(f_PPI_400$V1, f_PPI_400$V2)) # 16,519
 a_PPI_400 <- subset(PPI_400, (PPI_400$V1 %in% a_df$protein_id & PPI_400$V2 %in% a_df$protein_id))
 #write.table(a_PPI_400, file = "results/string/adult_PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
-a_unique_proteins <- unique(c(a_PPI_400$V1, a_PPI_400$V2)) # 17156
+a_unique_proteins <- unique(c(a_PPI_400$V1, a_PPI_400$V2)) # 17,156
 ```
 
 The resulting CSPPI networks contained `r pander(nrow(a_PPI_400))` PPIs between `r pander(length(a_unique_proteins))` unique proteins in the adult brain, and `r pander(nrow(f_PPI_400))` PPIs between `r pander(length(f_unique_proteins))` unique proteins in the fetal brain.
 Ensembl protein (STRING) identifiers were mapped to Ensembl gene identifiers.
 
-```{r protein_ID_mapping}
+```{r protein_ID_mapping, cache=TRUE}
 f_dict <- f_df$gene_name # 87,065 proteins
 names(f_dict) <- f_df$protein_id
 a_dict <- a_df$gene_name # 89,492 proteins
@@ -1190,6 +1191,8 @@ for(f in 1:nrow(f_PPI_400)){
     }
 }
 f_final <- distinct(f_csppi.df)
+#write.table(f_final, file = "results/string/fetal_CSPPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+f_final <- read.table(gzfile("results/string/fetal_CSPPI_400.txt"), header = FALSE, sep = "\t")
 
 a_csppi.df <- data.frame()
 for(a in 1:nrow(a_PPI_400)){
@@ -1200,15 +1203,43 @@ for(a in 1:nrow(a_PPI_400)){
     }
 }
 a_final <- distinct(a_csppi.df)
+#write.table(a_final, file = "results/string/adult_CSPPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+a_final <- read.table(gzfile("results/string/adult_CSPPI_400.txt"), header = FALSE, sep = "\t")
 ```
 
+We used
 
-```{r network_analysis}
+```{r asd-specific_CSPPIs}
 
 
 ```
 
+The Louvain clustering algorithm was applied to identify ASD-specific clusters of functionally related proteins within the CSPPI networks.
+
+```{r network_analysis_and_clustering}
 
 
+```
 
-### 8. 
+### 9. Pathway analysis of the genes within the ASD-specific CSPPI clusters.
+
+Pathway analysis was performed using the g:GOSt module of the g:Profiler tool. The significance level was determined using Benjamini-Hochberg algorithm (FDR < 0.05).
+
+```{r pathway_analysis}
+# This function quieries g:GOSt module of the g:Profiler tool. It takes a vector of genes and quieries the GOSt module. It outputs the dataframe with the query results for the genes.
+query_kegg <- function(genes){
+    tryCatch({
+        t <- gost(query = genes, organism = "hsapiens", ordered_query = TRUE,
+                  multi_query = FALSE, significant = TRUE, exclude_iea = FALSE,
+                  measure_underrepresentation = FALSE, evcodes = TRUE,
+                  user_threshold = 0.05, correction_method = "fdr",
+                  domain_scope = "annotated", custom_bg = NULL,
+                  numeric_ns = "", sources = c("KEGG"), as_short_link = FALSE)
+        return(t)
+        }, error=function(e){
+            cat("ERROR: ", conditionMessage(e), "\n")
+        })
+}
+
+
+```
