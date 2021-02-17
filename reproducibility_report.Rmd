@@ -900,7 +900,7 @@ gnomad_pheno <- gnomad %>%
 
 GO analysis was performed using the g:GOSt module of the g:Profiler tool. The significance level was determined using Benjamini-Hochberg algorithm (FDR < 0.05).
 
-```{r GO_analysis, fig.width=11, fig.height=6}
+```{r GO_analysis, fig.width=10, fig.height=6}
 # This function quieries g:GOSt module of the g:Profiler tool. It takes a vector of genes and quieries the GOSt module. It outputs the dataframe with the query results for the genes.
 query_go <- function(genes){
     tryCatch({
@@ -1047,7 +1047,7 @@ ggplot(f_cc_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)
 
 Top 10 biological processes for fetal and adult cortex-specific genes associated with the ASD-associated eQTLs, after removing all HLA genes from the lists.
 
-```{r without_HLA_genes}
+```{r without_HLA_genes, fig.width=10, fig.height=6}
 #a_egenes_nohla <- readLines("results/go/adult_egenes_nohla.txt")
 #a_go <- query_go(a_egenes_nohla); a_gos.df <- apply(a_go, 2, as.character)
 #write.table(a_gos.df, file = "results/go/a_nohla_all_gos_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
@@ -1099,14 +1099,23 @@ ggplot(f_bp_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)
 
 The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from [STRING website](https://string-db.org/cgi/download?sessionId=bBkmARm05QYT). We extracted only human PPIs with a combined score ≥ 400 between proteins:
 `zgrep ^"9606\." protein.links.full.v11.0.txt.gz | awk '($16 >= 400) { print $1, $2, $16 }' > human_PPIs.full.v11.0_400.txt`
+Made the file tab separated:
+`tr ' ' '\t' < human_PPIs.full.v11.0_400.txt > tab_human_PPIs.full.v11.0_400.txt` And compressed it:
+`gzip tab_human_PPIs.full.v11.0_400.txt`
 
 ```{r PPI_cleaning}
 # loading human PPI network
+PPI_400 <- read.table(gzfile("results/string/tab_human_PPIs.full.v11.0_400.txt.gz"), header = FALSE, sep="\t")
 
+# removing all characters before and up to "."
+PPI_400$V1 <- gsub(".*\\.", "", PPI_400$V1); PPI_400$V2 <- gsub(".*\\.", "", PPI_400$V2)
+PPI_400 <- distinct(PPI_400[, c("V1", "V2")]) # 2,000,451 PPIs
 
+# extracting unique proteins
+unique_proteins <- unique(c(PPI_400$V1, PPI_400$V2))
 ```
 
-Overall, we extracted 1,000,278 PPIs between a total of 19,257 unique human proteins.
+Overall, we extracted `r pander(nrow(PPI_400))` PPIs between a total of `r pander(length(unique_proteins))` unique human proteins.
 
 Ensembl protein (STRING) and transcript identifiers (adult and fetal cortex RNA-seq data) were mapped to Ensembl gene identifiers.
 
