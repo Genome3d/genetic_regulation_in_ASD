@@ -1110,16 +1110,16 @@ PPI_400 <- read.table(gzfile("results/string/tab_human_PPIs.full.v11.0_400.txt.g
 # removing all characters before and up to "."
 PPI_400$V1 <- gsub(".*\\.", "", PPI_400$V1); PPI_400$V2 <- gsub(".*\\.", "", PPI_400$V2)
 PPI_400 <- distinct(PPI_400[, c("V1", "V2")]) # 2,000,451 PPIs
+#write.table(PPI_400, file = "results/string/PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
 
 # extracting unique proteins
 unique_proteins <- unique(c(PPI_400$V1, PPI_400$V2))
 ```
 
 Overall, we extracted `r pander(nrow(PPI_400))` PPIs between a total of `r pander(length(unique_proteins))` unique human proteins.
+Transcript identifiers (adult and fetal cortex RNA-seq data) were mapped to Ensembl gene identifiers.
 
-Ensembl protein (STRING) and transcript identifiers (adult and fetal cortex RNA-seq data) were mapped to Ensembl gene identifiers.
-
-```{r ID_mapping}
+```{r transcript_ID_mapping}
 # reading fetal and adult gene expression data (gene TPM counts)
 fetal_gene_exp <- read.table("data/fetal_brain.gene_tpm_median.txt")
 adult_gene_exp <- read.table("data/adult_brain.gene_tpm_median.txt")
@@ -1153,11 +1153,53 @@ a_df <- bind_rows(a_protein_ids@elementMetadata@listData)
 f_df <- f_df[, c("protein_id", "gene_name")]
 a_df <- a_df[, c("protein_id", "gene_name")]
 f_df <- f_df[complete.cases(f_df), ] # 87,065 proteins
+#write.table(f_df, file = "results/string/fetal_protein_gene_pairs.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+f_df <- read.table("results/string/fetal_protein_gene_pairs.txt", header = FALSE, sep="\t")
 a_df <- a_df[complete.cases(a_df), ] # 89,492 proteins
+#write.table(a_df, file = "results/string/adult_protein_gene_pairs.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+a_df <- read.table("results/string/adult_protein_gene_pairs.txt", header = FALSE, sep="\t")
+```
 
+Transcriptome-wide fetal and adult cortex-specific PPIs (CSPPIs) were constructed by combining the STRING PPI network with cortex-specific expression data from adult or fetal cortex datasets.
 
+```{r CSPPIs}
+#subsetting PPIs that are present in fetal and adult cortical tissues
+f_PPI_400 <- subset(PPI_400, (PPI_400$V1 %in% f_df$protein_id & PPI_400$V2 %in% f_df$protein_id))
+#write.table(f_PPI_400, file = "results/string/fetal_PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+f_unique_proteins <- unique(c(f_PPI_400$V1, f_PPI_400$V2)) # 16519
+a_PPI_400 <- subset(PPI_400, (PPI_400$V1 %in% a_df$protein_id & PPI_400$V2 %in% a_df$protein_id))
+#write.table(a_PPI_400, file = "results/string/adult_PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+a_unique_proteins <- unique(c(a_PPI_400$V1, a_PPI_400$V2)) # 17156
+```
 
+The resulting CSPPI networks contained `r pander(nrow(a_PPI_400))` PPIs between `r pander(length(a_unique_proteins))` unique proteins in the adult brain, and `r pander(nrow(f_PPI_400))` PPIs between `r pander(length(f_unique_proteins))` unique proteins in the fetal brain.
+Ensembl protein (STRING) identifiers were mapped to Ensembl gene identifiers.
 
+```{r protein_ID_mapping}
+f_dict <- f_df$gene_name # 87,065 proteins
+names(f_dict) <- f_df$protein_id
+a_dict <- a_df$gene_name # 89,492 proteins
+names(a_dict) <- a_df$protein_id
+
+f_csppi.df <- data.frame()
+for(f in 1:nrow(f_PPI_400)){
+    if((f_PPI_400[f,][1] %in% names(f_dict)) & (f_PPI_400[f,][2] %in% names(f_dict))){
+        p1 <- f_PPI_400[f,][1]; p2 <- f_PPI_400[f,][2]
+        t <- c(f_dict[p1$V1], f_dict[p2$V2])
+        f_csppi.df <- rbind(f_csppi.df, t)
+    }
+}
+f_final <- distinct(f_csppi.df)
+
+a_csppi.df <- data.frame()
+for(a in 1:nrow(a_PPI_400)){
+    if((a_PPI_400[a,][1] %in% names(a_dict)) & (a_PPI_400[a,][2] %in% names(a_dict))){
+        p1 <- a_PPI_400[a,][1]; p2 <- a_PPI_400[a,][2]
+        t <- c(a_dict[p1$V1], a_dict[p2$V2])
+        a_csppi.df <- rbind(a_csppi.df, t)
+    }
+}
+a_final <- distinct(a_csppi.df)
 ```
 
 
