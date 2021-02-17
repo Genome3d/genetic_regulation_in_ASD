@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # install.packages("pacman")
 # load libraries
-pacman::p_load(ggplot2, pander, dplyr, tidyr)
+pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer)
 
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
@@ -26,9 +26,10 @@ Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were us
 4. SNP genomic positions for genome GRCh38p7 build 151 were obtained from ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b151_GRCh38p7.
 5. Gene annotations for GENCODE v26 (gencode.v26.GRCh38.genes.gtf) were downloaded from [gs://gtex-resources](https://console.cloud.google.com/storage/browser/gtex-resources/references).
 6. Roadmap Epigenomics Project 15-state ChromHMM models for adult dorsolateral prefrontal cortex (E073_15_coreMarks_hg38lift_mnemonics.bed.gz) and fetal brain (E081_15_coreMarks_hg38lift_mnemonics.bed.gz) were downloaded from https://egg2.wustl.edu/roadmap/data/byFileType/chromhmmSegmentations/ChmmModels/coreMarks/jointModel/final/.
-7. The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from https://string-db.org/.
+7. GWAS SNP-trait associations (gwas_catalog_v1.0.2-associations_e100_r2020-08-26.tsv.gz) were downloaded from [GWAS Catalog](https://www.ebi.ac.uk/gwas/docs/file-downloads) on 26/08/2020.
+8. The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from https://string-db.org/.
 
-### 1. Identification of significant spatial eQTL SNP-gene interactions using CoDeS3D
+### 1. Identification of significant spatial eQTL SNP-gene interactions using CoDeS3D.
 
 First, we run CoDeS3D pipeline to get regulatory interactions across fetal cortical tissue: `python codes3d/codes3d.py -s data/asd_snps/344_asd_snps.txt -o results/codes3d/fetal_cortex -n Cortical_plate_neurons_Won2016 Germinal_zone_neurons_Won2016 -t Fetal_Brain_Cortex_Walker2019`.
 Then across adult cortical tissue: `python codes3d/codes3d.py -s data/asd_snps/344_asd_snps.txt -o results/codes3d/adult_cortex -n Dorsolateral_prefrontal_cortex_cells_Schmitt2016 -t Brain_Cortex`
@@ -50,7 +51,7 @@ fetal_egenes <- unique(fetal$gene) # 81
 adult_egenes <- unique(adult$gene) # 44
 ```
 
-### 2. Percentage of eQTL SNPs vs non-eQTL SNPs
+### 2. Percentage of eQTL SNPs vs non-eQTL SNPs.
 
 ```{r eqtl_vs_non-eQTL, fig.width=7, fig.height=7}
 snp.df <- data.frame(
@@ -132,7 +133,7 @@ ggplot(shared.df, aes(x = snps, y = percentage, fill = "#A9A9A9")) +
 #dev.off()
 ```
 
-### 3. Functional annotation of eQTLs associated with ASD
+### 3. Functional annotation of eQTLs associated with ASD.
 
 We used [wANNOVAR tool](http://wannovar.wglab.org/) to obtain information about the locus eQTLs tagged. First, we extracted the funnctional annotation for ASD-associated eQTLs: `cut -f1,2,3,6,132 results/wannovar/asd_genome_summary.txt | sort -u > results/wannovar/asd_fun_snp_ann.txt`
 
@@ -283,7 +284,7 @@ snp2tfbs.df <- data.frame(
              nrow(shared_snp2tfbs[shared_snp2tfbs$MATCH=="MATCH=4",]),
              nrow(shared_snp2tfbs[shared_snp2tfbs$MATCH=="MATCH=5",])))
 
-#pdf("figures/fun_annotation/snp2tfbs_geombar.pdf", width = 10, height = 6)
+#pdf("figures/snp2tfbs.pdf", width = 10, height = 6)
 ggplot(data = snp2tfbs.df, aes(x=tfbs, y=snps, fill=eqtl_db)) +
     geom_bar(stat="identity", position = "dodge") +
     theme_classic() +
@@ -298,5 +299,211 @@ ggplot(data = snp2tfbs.df, aes(x=tfbs, y=snps, fill=eqtl_db)) +
     #coord_flip()
 #dev.off()
 ```
+
+Enrichment within active regulatory elements and histone modification marks was identified using the Roadmap Epigenomics Project 15-state ChromHMM models for adult dorsolateral prefrontal cortex (E073_15_coreMarks_hg38lift_mnemonics.bed.gz) and fetal brain (E081_15_coreMarks_hg38lift_mnemonics.bed.gz) downloaded from [here](https://egg2.wustl.edu/roadmap/data/byFileType/chromhmmSegmentations/ChmmModels/coreMarks/jointModel/final/).
+
+We used [Bedtools](https://bedtools.readthedocs.io/en/latest/) to intersect chromHMM models with fetal and adult eQTLs and non-eQTLs:
+
+Intersection between chromHMM adult cortex model and adult cortex eQTLs:
+`bedtools intersect -wb -a data/E073_15_coreMarks_hg38lift_mnemonics.bed -b results/chromHMM/aa-cortex_eqtl_snps_chrrenamed.bed > results/chromHMM/aa-cortex_eqtl_snps_E073.bed`
+Intersection between chromHMM adult cortex model and adult cortex non-eQTLs:
+`bedtools intersect -wb -a data/E073_15_coreMarks_hg38lift_mnemonics.bed -b results/chromHMM/aa-cortex_noneqtl_snps_chrrenamed.bed > results/chromHMM/aa-cortex_noneqtl_snps_E073.bed`
+Intersection between chromHMM fetal cortex model and fetal cortex eQTLs:
+`bedtools intersect -wb -a data/E081_15_coreMarks_hg38lift_mnemonics.bed -b results/chromHMM/ff-cortex_eqtl_snps_chrrenamed.bed > results/chromHMM/ff-cortex_eqtl_snps_E081.bed`
+Intersection between chromHMM fetal cortex model and fetal cortex non-eQTLs:
+`bedtools intersect -wb -a data/E081_15_coreMarks_hg38lift_mnemonics.bed -b results/chromHMM/ff-cortex_noneqtl_snps_chrrenamed.bed > results/chromHMM/ff-cortex_noneqtl_snps_E081.bed`
+
+```{r ChromHMM, fig.width=9, fig.height=5}
+# loading ChromHMM files
+f_chromhmm <- read.table(gzfile("data/E081_15_coreMarks_hg38lift_mnemonics.bed.gz"))
+a_chromhmm <- read.table(gzfile("data/E073_15_coreMarks_hg38lift_mnemonics.bed.gz"))
+
+# loading fetal and adult snps
+f_eqtls <- read.table("results/chromHMM/ff-cortex_eqtl_snps_E081.bed")
+f_eqtls <- distinct(f_eqtls[, c("V4", "V8")]) # 80
+f_noneqtls <- read.table("results/chromHMM/ff-cortex_noneqtl_snps_E081.bed")
+f_noneqtls <- distinct(f_noneqtls[, c("V4", "V8")]) # 264
+a_eqtls <- read.table("results/chromHMM/aa-cortex_eqtl_snps_E073.bed")
+a_eqtls <- distinct(a_eqtls[, c("V4", "V8")]) # 58
+a_noneqtls <- read.table("results/chromHMM/aa-cortex_noneqtl_snps_E073.bed")
+a_noneqtls <- distinct(a_noneqtls[, c("V4", "V8")]) # 286
+
+x_order <- c('Quies', 'TxWk', 'ReprPCWk', 'ReprPC', 'Enh', 'Tx', 'Het', 'TssA', 'TssAFlnk')
+chromHMM.df <- data.frame(
+  chromhmm_state = rep(x_order, each=2),
+  eqtl_db = rep(c('Adult', 'Fetal'), 9),
+  snps = c(nrow(a_eqtls[a_eqtls$V4=='15_Quies',]), nrow(f_eqtls[f_eqtls$V4=='15_Quies',]),
+           nrow(a_eqtls[a_eqtls$V4=='5_TxWk',]), nrow(f_eqtls[f_eqtls$V4=='5_TxWk',]),
+           nrow(a_eqtls[a_eqtls$V4=='14_ReprPCWk',]), nrow(f_eqtls[f_eqtls$V4=='14_ReprPCWk',]),
+           nrow(a_eqtls[a_eqtls$V4=='13_ReprPC',]), nrow(f_eqtls[f_eqtls$V4=='13_ReprPC',]),
+           nrow(a_eqtls[a_eqtls$V4=='7_Enh',]), nrow(f_eqtls[f_eqtls$V4=='7_Enh',]),
+           nrow(a_eqtls[a_eqtls$V4=='4_Tx',]), nrow(f_eqtls[f_eqtls$V4=='4_Tx',]),
+           nrow(a_eqtls[a_eqtls$V4=='9_Het',]), nrow(f_eqtls[f_eqtls$V4=='9_Het',]),
+           nrow(a_eqtls[a_eqtls$V4=='1_TssA',]), nrow(f_eqtls[f_eqtls$V4=='1_TssA',]),
+           nrow(a_eqtls[a_eqtls$V4=='2_TssAFlnk',]), nrow(f_eqtls[f_eqtls$V4=='2_TssAFlnk',])),
+  percent = c(round(nrow(a_eqtls[a_eqtls$V4=='15_Quies',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='15_Quies',])/nrow(f_eqtls)*100, 2),
+              round(nrow(a_eqtls[a_eqtls$V4=='5_TxWk',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='5_TxWk',])/nrow(f_eqtls)*100, 2),
+              round(nrow(a_eqtls[a_eqtls$V4=='14_ReprPCWk',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='14_ReprPCWk',])/nrow(f_eqtls)*100, 2),
+              round(nrow(a_eqtls[a_eqtls$V4=='13_ReprPC',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='13_ReprPC',])/nrow(f_eqtls)*100, 2),
+              round(nrow(a_eqtls[a_eqtls$V4=='7_Enh',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='7_Enh',])/nrow(f_eqtls)*100, 2),
+              round(nrow(a_eqtls[a_eqtls$V4=='4_Tx',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='4_Tx',])/nrow(f_eqtls)*100, 2),
+              round(nrow(a_eqtls[a_eqtls$V4=='9_Het',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='9_Het',])/nrow(f_eqtls)*100, 2),
+              round(nrow(a_eqtls[a_eqtls$V4=='1_TssA',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='1_TssA',])/nrow(f_eqtls)*100, 2),
+              round(nrow(a_eqtls[a_eqtls$V4=='2_TssAFlnk',])/nrow(a_eqtls)*100, 2),
+              round(nrow(f_eqtls[f_eqtls$V4=='2_TssAFlnk',])/nrow(f_eqtls)*100, 2)))
+
+#pdf("figures/chromHMM.pdf", width = 9, height = 6)
+ggplot(chromHMM.df, aes(x = factor(chromhmm_state, level=x_order), y = percent, fill = eqtl_db)) +
+    geom_bar(stat="identity", position = "dodge") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          legend.text=element_text(size=16),
+          legend.title=element_blank(),
+          legend.position = "bottom",
+          legend.direction = "horizontal",
+          axis.text=element_text(size=16, colour = "black"),
+          axis.text.x=element_text(angle = 20, vjust = 0.5, hjust=0.4),
+          axis.title=element_text(size=21, colour = "black")) +
+    labs(x = "ChromHMM states", y = "Percentage of eQTL SNPs") +
+    geom_text(aes(y = percent, label = paste0("n=", snps)),
+              position=position_dodge(width=0.9), vjust=-0.25, color = "black", 
+              size = 4, fontface = 'italic') +
+    scale_fill_manual(values=c("#92278F", "#009444"))
+#dev.off()
+```
+
+The majority of the fetal ASD-associated eQTLs located within weakly repressed PolyComb (ReprPCWk) and repressed PolyComb (ReprPC) regions were not identified as being eQTLs within the adult cortex.
+
+```{r ReprPC_and_ReprPCWk_eQTLs, fig.width=9, fig.height=6}
+f_ReprPC <- f_eqtls[f_eqtls$V4=='13_ReprPC', ] # 10 fetal ReprPC eQTLs
+#a_eqtls[a_eqtls$V8 %in% f_ReprPC$V8, ] # 1 eQTL-Quies
+#a_noneqtls[a_noneqtls$V8 %in% f_ReprPC$V8, ] # 4 noneQTL-ReprPCWk, 3 noneQTL-Quies, 1 noneQTL-ReprPC and 1 noneQTL-Enh
+
+x_order <- c('eQTL-Quies', 'noneQTL-ReprPCWk', 'noneQTL-Quies', 'noneQTL-ReprPC', 'noneQTL-Enh')
+reprPC.df <- data.frame(
+    a_chromhmm_state = x_order,
+    snps = c(1, 4, 3, 1, 1))
+
+#pdf("figures/reprPC_chromHMM.pdf", width = 9, height = 6)
+ggplot(reprPC.df, aes(x = factor(a_chromhmm_state, level=x_order), y = snps)) +
+    geom_bar(stat="identity", position = "dodge", fill = "#92278F") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          legend.text=element_text(size=16),
+          legend.title=element_blank(),
+          legend.position = "bottom",
+          legend.direction = "horizontal",
+          axis.text=element_text(size=16, colour = "black"),
+          axis.text.x=element_text(angle = 20, vjust = 0.5, hjust=0.4),
+          axis.title=element_text(size=21, colour = "black")) +
+    labs(x = "ChromHMM states in adult cortex", y = "Number of ReprPC eQTL SNPs\n in fetal cortex") +
+    geom_text(aes(y = snps, label = paste0("n=", snps)),
+              position=position_dodge(width=0.9), vjust=-0.25, color = "black", 
+              size = 7, fontface = 'italic')
+#dev.off()
+
+f_ReprPCWk <- f_eqtls[f_eqtls$V4=='14_ReprPCWk',]
+#a_eqtls[a_eqtls$V8 %in% f_ReprPCWk$V8, ] # 4 eQTL-Quies
+#a_noneqtls[a_noneqtls$V8 %in% f_ReprPCWk$V8, ] # 9 noneQTL-Quies and 1 noneQTL-ReprPCWk
+
+x_order <- c('eQTL-Quies', 'noneQTL-Quies', 'noneQTL-ReprPCWk')
+reprPCWk.df <- data.frame(
+    a_chromhmm_state = x_order,
+    snps = c(4, 9, 1))
+
+#options(digits=0)
+#pdf("figures/reprPCWk_chromHMM.pdf", width = 9, height = 6)
+ggplot(reprPCWk.df, aes(x = factor(a_chromhmm_state, level=x_order), y = snps)) +
+    geom_bar(stat="identity", position = "dodge", fill = "#92278F") +
+    theme_classic() +
+    theme(plot.title = element_blank(),
+          legend.text=element_text(size=16),
+          legend.title=element_blank(),
+          legend.position = "bottom",
+          legend.direction = "horizontal",
+          axis.text=element_text(size=16, colour = "black"),
+          axis.text.x=element_text(angle = 20, vjust = 0.5, hjust=0.4),
+          axis.title=element_text(size=21, colour = "black")) +
+    labs(x = "ChromHMM states in adult cortex", 
+         y = "Number of ReprPCWk eQTL SNPs\n in fetal cortex") +
+    geom_text(aes(y = snps, label = paste0("n=", snps)),
+              position=position_dodge(width=0.9), vjust=-0.25, color = "black", 
+              size = 7, fontface = 'italic') +
+    scale_y_continuous(limits=c(0, 10))
+#dev.off()
+```
+
+ChromHMM enrichment analysis was performed using R package [regioneR](https://www.bioconductor.org/packages/devel/bioc/vignettes/regioneR/inst/doc/regioneR.html) (permutation test: 1000).
+
+```{r permutation_test, fig.width=9, fig.height=5}
+# loading ChromHMM files
+f <- gzfile("data/E081_15_coreMarks_hg38lift_mnemonics.bed.gz")
+f_chromhmm <- import(f, format = "BED")
+a <- gzfile("data/E073_15_coreMarks_hg38lift_mnemonics.bed.gz")
+a_chromhmm <- import(a, format = "BED")
+
+f <- read.table("results/chromHMM/ff-cortex_eqtl_snps_E081.bed")
+f <- distinct(f[, c("V1", "V2", "V3", "V8")])
+f_eqtls <- makeGRangesFromDataFrame(f, seqnames.field = "V1", start.field = "V2", end.field = "V3",
+                                    ignore.strand = TRUE, keep.extra.columns = TRUE)
+
+numOverlaps(f_eqtls, f_chromhmm, genome="hg38", count.once=TRUE) # 80
+# permute the ChromHMM regions
+set.seed(1234)
+numOverlaps(f_eqtls, randomizeRegions(f_chromhmm), genome="hg38", count.once=TRUE) # 43
+# test if eQTLs overlap with ChromHMM more than expected; 1000 permutations
+f_pt <- overlapPermTest(A=f_eqtls, B=f_chromhmm, ntimes=1000, genome="hg38",
+                        mc.set.seed=FALSE, force.parallel=TRUE, count.once=TRUE)
+f_pt # P-value: 0.000999000999000999. The test was significant, with a p-value < 0.001.
+plot(f_pt)
+
+# test if eQTLs overlap with ChromHMM ReprPCWk regions more than expected; 1000 permutations
+f_ReprPCWk_reg <- f_chromhmm[f_chromhmm@elementMetadata@listData[["name"]]=="14_ReprPCWk"]
+set.seed(1234)
+f_pt <- overlapPermTest(A=f_eqtls, B=f_ReprPCWk_reg, ntimes=1000, genome="hg38",
+                        mc.set.seed=FALSE, force.parallel=TRUE, count.once=TRUE)
+f_pt # P-value: 0.000999000999000999 The test was significant, with a p-value < 0.001.
+plot(f_pt)
+
+# test if eQTLs overlap with ChromHMM ReprPC regions more than expected; 1000 permutations
+f_ReprPC_reg <- f_chromhmm[f_chromhmm@elementMetadata@listData[["name"]]=="13_ReprPC"]
+set.seed(1234)
+f_pt <- overlapPermTest(A=f_eqtls, B=f_ReprPC_reg, ntimes=1000, genome="hg38",
+                        mc.set.seed=FALSE, force.parallel=TRUE, count.once=TRUE)
+f_pt # P-value: 0.000999000999000999 The test was significant, with a p-value < 0.001.
+plot(f_pt)
+
+a <- read.table("results/chromHMM/aa-cortex_eqtl_snps_E073.bed")
+a <- distinct(a[, c("V1", "V2", "V3", "V8")])
+a_eqtls <- makeGRangesFromDataFrame(a, seqnames.field = "V1", start.field = "V2", end.field = "V3",
+                                    ignore.strand = TRUE, keep.extra.columns = TRUE)
+
+numOverlaps(a_eqtls, a_chromhmm, count.once=TRUE) # should be 58
+# permute the ChromHMM regions
+set.seed(1234)
+numOverlaps(a_eqtls, randomizeRegions(a_chromhmm), genome="hg38", count.once=TRUE) # 43
+# test if eQTLs overlap with ChromHMM more than expected; 1000 permutations
+a_pt <- overlapPermTest(A=a_eqtls, B=a_chromhmm, ntimes=1000, genome="hg38",
+                        mc.set.seed=FALSE, force.parallel=TRUE, count.once=TRUE)
+a_pt # P-value: 0.002997002997003. The test was significant, with a p-value < 0.005.
+plot(a_pt)
+```
+
+Finally, we evaluated identified eQTL associations with other phenotypes in the [GWAS Catalog](https://www.ebi.ac.uk/gwas/).
+
+```{r gwas_associations}
+
+
+```
+
+
 
 
