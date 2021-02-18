@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("pacman")
 # load libraries
 pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2, RColorBrewer,
-               ComplexHeatmap, circlize, EnsDb.Hsapiens.v86, gprofiler2)
+               ComplexHeatmap, circlize, EnsDb.Hsapiens.v86, gprofiler2, igraph)
 
 setwd("/Users/foffa/Desktop/genetic_regulation_in_ASD")
 ```
@@ -1194,9 +1194,75 @@ a_asd_unique_proteins <- unique(c(a_asd_csppi.df$p1, a_asd_csppi.df$p2)) # ?
 
 The Louvain clustering algorithm was applied to identify ASD-specific clusters of functionally related proteins within the CSPPI networks.
 
-```{r network_analysis_and_clustering}
+```{r network_analysis_and_clustering, fig.width=7, fig.height=6}
+# loading ASD-specific PPI links and nodes
+asd_a_links <- read.table("results/string/asd_a_CSPPIs_links.txt", sep = "\t", header=TRUE)
+asd_a_nodes <- read.table("results/string/asd_a_CSPPIs_nodes.txt", sep = "\t", header=TRUE)
+asd_f_links <- read.table("results/string/asd_f_CSPPIs_links.txt", sep = "\t", header=TRUE)
+asd_f_nodes <- read.table("results/string/asd_f_CSPPIs_nodes.txt", sep = "\t", header=TRUE)
 
+## ASD CSPPIs in adult cortex
+a_graph <- graph_from_data_frame(d=asd_a_links, vertices=asd_a_nodes, directed=F); a_graph
 
+E(a_graph) # the edges
+V(a_graph) # the vertices
+E(a_graph)$combined_score  # edge attribute "combined_score"
+V(a_graph)$shared # vertex attribute "shared"
+V(a_graph)[shared=="yes"] # find edges by attribute
+a_graph[1,] # you can also examine the network matrix directly
+as_edgelist(a_graph, names=T) # get an edge list
+as_adjacency_matrix(a_graph, attr="combined_score") # get a matrix
+as_data_frame(a_graph, what="edges") # get a data frame describing edges
+as_data_frame(a_graph, what="vertices") # get a data frame describing nodes
+
+# Louvain clustering
+a_lc <- cluster_louvain(a_graph, weights=NA) #class(a_lc)
+membership(a_lc)
+communities(a_lc) # 3 clusters
+#plot(a_lc, a_graph, edge.color="orange", vertex.color="orange", vertex.frame.color="#ffffff", vertex.label.color="black")
+
+col_nodes <- c("#92278F", "#939598")
+col_names <- c("#1C75BC", "#ED1C24", "black")
+set.seed(1234)
+a <- layout_with_fr(a_graph)
+#a <- layout_with_kk(aa_graph)
+#pdf("figures/asd_a_CSPPI_network.pdf", width = 14, height = 10)
+plot(a_graph, edge.width=2.5, edge.color="lightgray",
+     vertex.color=col_nodes[V(a_graph)$shared], vertex.frame.color="lightgray",
+     vertex.size=V(a_graph)$logTPM*7, vertex.label.color=col_names[V(a_graph)$regulation],
+     layout=a) # vertex.label=NA
+#dev.off() 
+
+## ASD CSPPIs in fetal cortex
+f_graph <- graph_from_data_frame(d=asd_f_links, vertices=asd_f_nodes, directed=F); f_graph
+
+# Louvain clustering
+f_lc <- cluster_louvain(f_graph, weights=NA)
+membership(f_lc)
+communities(f_lc) # 7 clusters
+#plot(f_lc, f_graph, edge.color="orange", vertex.color="orange", vertex.frame.color="#ffffff", vertex.label.color="black")
+
+E(f_graph) # the edges
+V(f_graph) # the vertices
+E(f_graph)$combined_score  # edge attribute "combined_score"
+V(f_graph)$shared # vertex attribute "shared"
+V(f_graph)[shared=="yes"] # find edges by attribute
+f_graph[1,] # you can also examine the network matrix directly
+as_edgelist(f_graph, names=T) # get an edge list
+as_adjacency_matrix(f_graph, attr="combined_score") # get a matrix
+as_data_frame(f_graph, what="edges") # get a data frame describing edges
+as_data_frame(f_graph, what="vertices")
+
+col_nodes <- c("#009444", "#939598")
+col_names <- c("#1C75BC", "#ED1C24", "black")
+set.seed(1234)
+f <- layout_with_fr(f_graph)
+#pdf("figures/asd_f_CSPPI_network.pdf", width = 14, height = 10)
+plot(f_graph, edge.width=2.5, edge.color="lightgray",
+     vertex.color=col_nodes[V(f_graph)$shared], vertex.frame.color="lightgray",
+     vertex.size=V(f_graph)$logTPM*7, vertex.label.color=col_names[V(f_graph)$regulation],
+     layout=f) # vertex.label=NA
+#dev.off()
 ```
 
 ### 9. Pathway analysis of the genes within the ASD-specific CSPPI clusters.
@@ -1219,5 +1285,28 @@ query_kegg <- function(genes){
         })
 }
 
+## Pathways analysis for 3 PPI clusters in adult cortex
+communities(a_lc)[1] # to get gene names
+a_1 <- communities(a_lc)$'1' # to get gene names
+a_1_path <- query_kegg(a_1)
+#a_1_paths <- a_1_path$result
+#a_1.df <- apply(a_1_paths, 2, as.character)
+#write.table(a_1.df, file = "results/paths/asd_a_CSPPI_cluster1_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+
+communities(a_lc)[2] # to get gene names
+a_2 <- communities(aa_lc)$'2' # to get gene names
+a_2_path <- query_kegg(a_2)
+#a_2_paths <- a_2_path$result
+#a_2.df <- apply(a_2_paths, 2, as.character)
+#write.table(a_2.df, file = "results/paths/asd_a_CSPPI_cluster2_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+
+communities(a_lc)[3] # to get gene names
+a_3 <- communities(a_lc)$'3' # to get gene names
+a_3_path <- query_kegg(a_3)
+#a_3_paths <- a_3_path$result
+#a_3.df <- apply(a_3_paths, 2, as.character)
+#write.table(a_3.df, file = "results/paths/asd_a_CSPPI_cluster3_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+
+## Pathways analysis for 3 PPI clusters in fetal cortex
 
 ```

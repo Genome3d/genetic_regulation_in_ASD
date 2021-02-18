@@ -1,0 +1,10 @@
+protein	tissue	expression	shared	shared_yes_no	regulation	regulation_up_down_both	regulation_type	snps	logTPM
+APOPT1	fetal	11.3937	1	no	1	down	Cis	rs4906364	1.093200979
+AS3MT	fetal	7.16527	2	yes	1	down	Cis	"rs7085104, rs11191419"	0.91197055
+HLA-DMA	fetal	5.44112	2	yes	3	both	"Cis, Trans-intrachromosomal"	"rs9276933, rs1265945, rs204995, rs2071278"	0.80896139
+HLA-DQB1	fetal	4.58086	1	no	1	down	Cis	rs9274657	0.746701128
+KLC1	fetal	64.3434	1	no	2	up	Cis	rs10149470	1.815201728
+TAP1	fetal	10.5833	1	no	2	up	Cis	rs7743252	1.063832304
+TAP2	fetal	7.98906	2	yes	2	up	Cis	rs7743252	0.953714279
+TRIM26	fetal	16.8308	1	no	2	up	Cis	"rs1117490, rs2021722"	1.251170829
+ZSCAN31	fetal	3.54758	1	no	2	up	Cis	"rs6921919, rs34787248"	0.657780348
