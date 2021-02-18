@@ -1285,28 +1285,82 @@ query_kegg <- function(genes){
         })
 }
 
+## Uncomment the lines below to query g:GOSt
 ## Pathways analysis for 3 PPI clusters in adult cortex
 communities(a_lc)[1] # to get gene names
 a_1 <- communities(a_lc)$'1' # to get gene names
-a_1_path <- query_kegg(a_1)
+#a_1_path <- query_kegg(a_1) # no pathways --> uknown cluster
 #a_1_paths <- a_1_path$result
 #a_1.df <- apply(a_1_paths, 2, as.character)
-#write.table(a_1.df, file = "results/paths/asd_a_CSPPI_cluster1_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+#write.table(a_1.df, file = "results/kegg/asd_a_CSPPI_cluster1_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 
 communities(a_lc)[2] # to get gene names
-a_2 <- communities(aa_lc)$'2' # to get gene names
-a_2_path <- query_kegg(a_2)
+a_2 <- communities(a_lc)$'2' # to get gene names
+#a_2_path <- query_kegg(a_2)
 #a_2_paths <- a_2_path$result
 #a_2.df <- apply(a_2_paths, 2, as.character)
 #write.table(a_2.df, file = "results/paths/asd_a_CSPPI_cluster2_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+a_2.df <- read.table("results/kegg/asd_a_CSPPI_cluster2_kegg_fdr.txt", header = TRUE, sep = "\t")
 
 communities(a_lc)[3] # to get gene names
 a_3 <- communities(a_lc)$'3' # to get gene names
-a_3_path <- query_kegg(a_3)
+#a_3_path <- query_kegg(a_3) # no pathways --> uknown cluster
 #a_3_paths <- a_3_path$result
 #a_3.df <- apply(a_3_paths, 2, as.character)
-#write.table(a_3.df, file = "results/paths/asd_a_CSPPI_cluster3_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+#write.table(a_3.df, file = "results/kegg/asd_a_CSPPI_cluster3_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 
 ## Pathways analysis for 3 PPI clusters in fetal cortex
+communities(f_lc)[1] # to get gene names
+f_1 <- communities(f_lc)$'1' # to get gene names
+#f_1_path <- query_kegg(f_1)
+#f_1_paths <- f_1_path$result
+#f_1.df <- apply(f_1_paths, 2, as.character)
+#write.table(f_1.df, file = "results/kegg/asd_f_CSPPI_cluster1_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+f_1.df <- read.table("results/kegg/asd_f_CSPPI_cluster1_kegg_fdr.txt", header = TRUE, sep = "\t")
 
+communities(f_lc)[2] # to get gene names
+f_2 <- communities(f_lc)$'2' # to get gene names
+#f_2_path <- query_kegg(f_2) # no pathways --> uknown cluster
+#f_2_paths <- f_2_path$result
+#f_2.df <- apply(f_2_paths, 2, as.character)
+#write.table(f_2.df, file = "results/kegg/asd_f_CSPPI_cluster2_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+
+communities(f_lc)[3] # to get gene names
+f_3 <- communities(f_lc)$'3' # to get gene names
+#f_3_path <- query_kegg(f_3)
+#f_3_paths <- f_3_path$result
+#f_3.df <- apply(f_3_paths, 2, as.character)
+#write.table(f_3.df, file = "results/kegg/asd_f_CSPPI_cluster3_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+f_3.df <- read.table("results/kegg/asd_f_CSPPI_cluster3_kegg_fdr.txt", header = TRUE, sep = "\t")
+
+communities(f_lc)[4] # to get gene names
+f_4 <- communities(f_lc)$'4' # to get gene names
+#f_4_path <- query_kegg(f_4)
+#f_4_paths <- f_4_path$result
+#f_4.df <- apply(f_4_paths, 2, as.character)
+#write.table(f_4.df, file = "results/kegg/asd_f_CSPPI_cluster4_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+f_4.df <- read.table("results/kegg/asd_f_CSPPI_cluster4_kegg_fdr.txt", header = TRUE, sep = "\t")
+
+communities(f_lc)[5] # to get gene names
+f_5 <- communities(f_lc)$'5' # to get gene names
+#f_5_path <- query_kegg(f_5) # no pathways --> uknown cluster
+#f_5_paths <- f_5_path$result
+#f_5.df <- apply(f_5_paths, 2, as.character)
+#write.table(f_5.df, file = "results/kegg/asd_f_CSPPI_cluster5_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+
+communities(f_lc)[6] # to get gene names
+f_6 <- communities(f_lc)$'6' # to get gene names
+#f_6_path <- query_kegg(f_6)
+#f_6_paths <- f_6_path$result
+#f_6.df <- apply(f_6_paths, 2, as.character)
+#write.table(f_6.df, file = "results/kegg/asd_f_CSPPI_cluster6_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+f_6.df <- read.table("results/kegg/asd_f_CSPPI_cluster6_kegg_fdr.txt", header = TRUE, sep = "\t")
+
+communities(f_lc)[7] # to get gene names
+f_7 <- communities(f_lc)$'7' # to get gene names
+#f_7_path <- query_kegg(f_7)
+#f_7_paths <- f_7_path$result
+#f_7.df <- apply(f_7_paths, 2, as.character)
+#write.table(f_7.df, file = "results/kegg/asd_f_CSPPI_cluster7_kegg_fdr.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+f_7.df <- read.table("results/kegg/asd_f_CSPPI_cluster7_kegg_fdr.txt", header = TRUE, sep = "\t")
 ```

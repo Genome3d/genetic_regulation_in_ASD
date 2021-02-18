@@ -1,0 +1,4 @@
+"query"	"significant"	"p_value"	"term_size"	"query_size"	"intersection_size"	"precision"	"recall"	"term_id"	"source"	"term_name"	"effective_domain_size"	"source_order"	"parents"	"evidence_codes"	"intersection"
+"query_1"	"TRUE"	"0.000245137516352249"	"27"	"3"	"2"	"0.666666666666667"	"0.0740740740740741"	"KEGG:01040"	"KEGG"	"Biosynthesis of unsaturated fatty acids"	"7747"	"161"	"KEGG:00000"	"KEGG,KEGG"	"FADS1,FADS2"
+"query_1"	"TRUE"	"0.000555878910606354"	"57"	"3"	"2"	"0.666666666666667"	"0.0350877192982456"	"KEGG:01212"	"KEGG"	"Fatty acid metabolism"	"7747"	"184"	"KEGG:00000"	"KEGG,KEGG"	"FADS1,FADS2"
+"query_1"	"TRUE"	"0.0225194683612236"	"25"	"3"	"1"	"0.333333333333333"	"0.04"	"KEGG:00592"	"KEGG"	"alpha-Linolenic acid metabolism"	"7747"	"94"	"KEGG:00000"	"KEGG"	"FADS2"
