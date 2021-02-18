@@ -1,4 +1,4 @@
-protein1	protein2	combined_score
+p1	p2	combined_score
 FADS1	TBL1X	900
 TMEM110	NEK4	448
 GNL3	NEK4	517

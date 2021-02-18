@@ -1,4 +1,4 @@
-protein1	protein2	combined_score
+p1	p2	combined_score
 TAP2	TAP1	963
 HLA-DMA	TAP1	687
 HLA-DQB1	TAP1	444

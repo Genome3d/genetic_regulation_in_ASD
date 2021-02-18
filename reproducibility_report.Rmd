@@ -7,7 +7,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
 
 # install.packages("pacman")
 # load libraries
@@ -55,7 +55,7 @@ adult_egenes <- unique(adult$gene) # 44
 
 ### 2. Percentage of eQTL SNPs vs non-eQTL SNPs.
 
-```{r eqtl_vs_non-eQTL, fig.width=7, fig.height=7}
+```{r eqtl_vs_non-eQTL, fig.width=5, fig.height=7}
 snp.df <- data.frame(
   eqtl_db = rep(c('Adult', 'Fetal'), each=1),
   snps = rep(c("eQTL","non-eQTL"), each=2),
@@ -104,7 +104,7 @@ The proportion of eQTLs is significantly different in two groups with a p-value 
 
 Thirty ASD-associated eQTLs were shared between fetal and adult cortical tissues.
 
-```{r shared_eqtls_and_non-eqtls, fig.width=7, fig.height=7}
+```{r shared_eqtls_and_non-eqtls, fig.width=5, fig.height=7}
 shared_eqtls <- intersect(fetal_eqtls, adult_eqtls) # 30
 shared_noneqtls <- intersect(asd_snps[!(asd_snps %in% fetal_eqtls)],
                              asd_snps[!(asd_snps %in% adult_eqtls)]) # 236
@@ -553,7 +553,7 @@ merged <- merge(gwas_st_pairs_uniq, gwas_st_pairs_uniq_pos, by = "snp")
 
 We overlapped GWAS SNPs with fetal and adult eQTLs to identify how many eQTLs have an association with GWAS traits.
 
-```{r gwas_associations, fig.width=9, fig.height=6}
+```{r gwas_associations, fig.width=10, fig.height=5}
 f_assoc <- merged[merged$snp %in% fetal_eqtls, ]
 a_assoc <- merged[merged$snp %in% adult_eqtls, ]
 
@@ -901,7 +901,7 @@ gnomad_pheno <- gnomad %>%
 
 GO analysis was performed using the g:GOSt module of the g:Profiler tool. The significance level was determined using Benjamini-Hochberg algorithm (FDR < 0.05).
 
-```{r GO_analysis, fig.width=10, fig.height=6}
+```{r GO_analysis, fig.width=12, fig.height=5}
 # This function quieries g:GOSt module of the g:Profiler tool. It takes a vector of genes and quieries the GOSt module. It outputs the dataframe with the query results for the genes.
 query_go <- function(genes){
     tryCatch({
@@ -1046,7 +1046,7 @@ ggplot(f_cc_top10, aes(x=factor(term_name, levels = rev(levels(factor(term_name)
 #dev.off()
 ```
 
-Top 10 biological processes for fetal and adult cortex-specific genes associated with the ASD-associated eQTLs, after removing all HLA genes from the lists.
+Biological processes for fetal and adult cortex-specific genes associated with the ASD-associated eQTLs, after removing all HLA genes from the lists.
 
 ```{r without_HLA_genes, fig.width=10, fig.height=6}
 #a_egenes_nohla <- readLines("results/go/adult_egenes_nohla.txt")
@@ -1067,10 +1067,9 @@ f_bp <- f_gos.df[grep('GO:BP', f_gos.df[, "source"]), ]
 ### 8. Protein-protein interactions (PPI) network analysis and vizualization.
 
 The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from [STRING website](https://string-db.org/cgi/download?sessionId=bBkmARm05QYT). We extracted only human PPIs with a combined score ≥ 400 between proteins:
-`zgrep ^"9606\." protein.links.full.v11.0.txt.gz | awk '($16 >= 400) { print $1, $2, $16 }' > human_PPIs.full.v11.0_400.txt`
-Made the file tab separated:
-`tr ' ' '\t' < human_PPIs.full.v11.0_400.txt > tab_human_PPIs.full.v11.0_400.txt` And compressed it:
-`gzip tab_human_PPIs.full.v11.0_400.txt`
+`zgrep ^"9606\." protein.links.full.v11.0.txt.gz | awk '($16 >= 400) { print $1, $2, $16 }' > human_PPIs.full.v11.0_400.txt`  
+Made the file tab separated: `tr ' ' '\t' < human_PPIs.full.v11.0_400.txt > tab_human_PPIs.full.v11.0_400.txt`  
+And compressed it: `gzip tab_human_PPIs.full.v11.0_400.txt`
 
 ```{r PPI_cleaning}
 # loading human PPI network
@@ -1082,7 +1081,7 @@ PPI_400 <- distinct(PPI_400) # 2,000,451 PPIs
 #write.table(PPI_400, file = "results/string/PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
 
 # extracting unique proteins
-unique_proteins <- unique(c(PPI_400$V1, PPI_400$V2))
+unique_proteins <- unique(c(PPI_400$V1, PPI_400$V2)) # 19,258
 ```
 
 Overall, we extracted `r pander(nrow(PPI_400))` PPIs between a total of `r pander(length(unique_proteins))` unique human proteins.
@@ -1172,33 +1171,33 @@ create_csppi <- function(ppi, dict){
 #test_subset <- subset(f_PPI_400, f_PPI_400$V3>997) # 21,381
 #test_f_csppi.df <- create_csppi(test_subset, f_dict)
 
-f_csppi.df <- create_csppi(f_PPI_400, f_dict) # 1,690,571 PPIs
-#write.table(f_csppi.df, file = "results/string/fetal_CSPPI_400.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
-f_csppi.df <- read.table(gzfile("results/string/fetal_CSPPI_400.txt.gz"), header = TRUE, sep = "\t")
+# Uncomment the line below
+#f_csppi.df <- create_csppi(f_PPI_400, f_dict) # 1,690,571 PPIs
+#write.table(f_csppi.df, file = "results/string/fetal_CSPPI.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+#f_csppi.df <- read.table(gzfile("results/string/fetal_CSPPI.txt.gz"), header = TRUE, sep = "\t")
 
-a_csppi.df <- create_csppi(a_PPI_400, a_dict)
-#write.table(a_csppi.df, file = "results/string/adult_CSPPI_400.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
-a_csppi.df <- read.table(gzfile("results/string/adult_CSPPI_400.txt.gz"), header = TRUE, sep = "\t")
+# Uncomment the line below
+#a_csppi.df <- create_csppi(a_PPI_400, a_dict) # 1,784,342 PPIs
+#write.table(a_csppi.df, file = "results/string/adult_CSPPI.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+#a_csppi.df <- read.table(gzfile("results/string/adult_CSPPI.txt.gz"), header = TRUE, sep = "\t")
 ```
 
-We extracted only ASD-associated genes from the fetal and adult CSPPIs to get ASD-specific CSPPIs.
+We extracted only interactions between ASD-associated genes from the fetal and adult CSPPIs to get ASD-specific fetal and adult CSPPIs.
 
 ```{r asd-specific_CSPPIs}
-# get eGenes in fetal and adult cortical tissues
-fetal_egenes <- unique(fetal$gene) # 81
-adult_egenes <- unique(adult$gene) # 44
-
 #subsetting PPIs that are present in fetal and adult CSPPIs
-f_asd_csppi.df <- subset(f_csppi.df, (f_csppi.df$p1 %in% fetal_egenes & f_csppi.df$p2 %in% fetal_egenes))
-#write.table(f_asd_csppi.df, file = "results/string/fetal_asd_CSPPI_400.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
-f_asd_csppi.df <- read.table(gzfile("results/string/fetal_asd_CSPPI_400.txt.gz"), header = TRUE, sep = "\t")
-f_asd_unique_proteins <- unique(c(f_asd_csppi.df$p1, f_asd_csppi.df$p2)) # ?
+#f_asd_csppi.df <- subset(f_csppi.df, (f_csppi.df$p1 %in% fetal_egenes & f_csppi.df$p2 %in% fetal_egenes))
+#write.table(f_asd_csppi.df, file = "results/string/asd_f_CSPPIs_links.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+f_asd_csppi.df <- read.table("results/string/asd_f_CSPPIs_links.txt", header = TRUE, sep = "\t")
+f_asd_unique_proteins <- unique(c(f_asd_csppi.df$p1, f_asd_csppi.df$p2)) # 36
 
-a_asd_csppi.df <- subset(a_csppi.df, (a_csppi.df$p1 %in% adult_egenes & a_csppi.df$p2 %in% adult_egenes))
-#write.table(f_asd_csppi.df, file = "results/string/fetal_asd_CSPPI_400.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
-a_asd_csppi.df <- read.table(gzfile("results/string/adult_asd_CSPPI_400.txt.gz"), header = TRUE, sep = "\t")
-a_asd_unique_proteins <- unique(c(a_asd_csppi.df$p1, a_asd_csppi.df$p2)) # ?
+#a_asd_csppi.df <- subset(a_csppi.df, (a_csppi.df$p1 %in% adult_egenes & a_csppi.df$p2 %in% adult_egenes))
+#write.table(f_asd_csppi.df, file = "results/string/asd_a_CSPPIs_links.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
+a_asd_csppi.df <- read.table("results/string/asd_a_CSPPIs_links.txt", header = TRUE, sep = "\t")
+a_asd_unique_proteins <- unique(c(a_asd_csppi.df$p1, a_asd_csppi.df$p2)) # 9
 ```
+
+The resulting ASD-specific CSPPI networks contained `r pander(nrow(a_asd_csppi.df))` PPIs between `r pander(length(a_asd_unique_proteins))` unique proteins in the adult brain, and `r pander(nrow(f_asd_csppi.df))` PPIs between `r pander(length(f_asd_unique_proteins))` unique proteins in the fetal brain.
 
 The Louvain clustering algorithm was applied to identify ASD-specific clusters of functionally related proteins within the CSPPI networks.
 
@@ -1210,22 +1209,21 @@ asd_f_links <- read.table("results/string/asd_f_CSPPIs_links.txt", sep = "\t", h
 asd_f_nodes <- read.table("results/string/asd_f_CSPPIs_nodes.txt", sep = "\t", header=TRUE)
 
 ## ASD CSPPIs in adult cortex
-a_graph <- graph_from_data_frame(d=asd_a_links, vertices=asd_a_nodes, directed=F); a_graph
-
-E(a_graph) # the edges
-V(a_graph) # the vertices
-E(a_graph)$combined_score  # edge attribute "combined_score"
-V(a_graph)$shared # vertex attribute "shared"
-V(a_graph)[shared=="yes"] # find edges by attribute
-a_graph[1,] # you can also examine the network matrix directly
-as_edgelist(a_graph, names=T) # get an edge list
-as_adjacency_matrix(a_graph, attr="combined_score") # get a matrix
-as_data_frame(a_graph, what="edges") # get a data frame describing edges
-as_data_frame(a_graph, what="vertices") # get a data frame describing nodes
+a_graph <- graph_from_data_frame(d=asd_a_links, vertices=asd_a_nodes, directed=F)
+#E(a_graph) # the edges
+#V(a_graph) # the vertices
+#E(a_graph)$combined_score  # edge attribute "combined_score"
+#V(a_graph)$shared # vertex attribute "shared"
+#V(a_graph)[shared=="yes"] # find edges by attribute
+#a_graph[1,] # you can also examine the network matrix directly
+#as_edgelist(a_graph, names=T) # get an edge list
+#as_adjacency_matrix(a_graph, attr="combined_score") # get a matrix
+#as_data_frame(a_graph, what="edges") # get a data frame describing edges
+#as_data_frame(a_graph, what="vertices") # get a data frame describing nodes
 
 # Louvain clustering
 a_lc <- cluster_louvain(a_graph, weights=NA) #class(a_lc)
-membership(a_lc)
+#membership(a_lc)
 communities(a_lc) # 3 clusters
 #plot(a_lc, a_graph, edge.color="orange", vertex.color="orange", vertex.frame.color="#ffffff", vertex.label.color="black")
 
@@ -1242,24 +1240,23 @@ plot(a_graph, edge.width=2.5, edge.color="lightgray",
 #dev.off() 
 
 ## ASD CSPPIs in fetal cortex
-f_graph <- graph_from_data_frame(d=asd_f_links, vertices=asd_f_nodes, directed=F); f_graph
+f_graph <- graph_from_data_frame(d=asd_f_links, vertices=asd_f_nodes, directed=F)
+#E(f_graph) # the edges
+#V(f_graph) # the vertices
+#E(f_graph)$combined_score  # edge attribute "combined_score"
+#V(f_graph)$shared # vertex attribute "shared"
+#V(f_graph)[shared=="yes"] # find edges by attribute
+#f_graph[1,] # you can also examine the network matrix directly
+#as_edgelist(f_graph, names=T) # get an edge list
+#as_adjacency_matrix(f_graph, attr="combined_score") # get a matrix
+#as_data_frame(f_graph, what="edges") # get a data frame describing edges
+#as_data_frame(f_graph, what="vertices")
 
 # Louvain clustering
 f_lc <- cluster_louvain(f_graph, weights=NA)
-membership(f_lc)
+#membership(f_lc)
 communities(f_lc) # 7 clusters
 #plot(f_lc, f_graph, edge.color="orange", vertex.color="orange", vertex.frame.color="#ffffff", vertex.label.color="black")
-
-E(f_graph) # the edges
-V(f_graph) # the vertices
-E(f_graph)$combined_score  # edge attribute "combined_score"
-V(f_graph)$shared # vertex attribute "shared"
-V(f_graph)[shared=="yes"] # find edges by attribute
-f_graph[1,] # you can also examine the network matrix directly
-as_edgelist(f_graph, names=T) # get an edge list
-as_adjacency_matrix(f_graph, attr="combined_score") # get a matrix
-as_data_frame(f_graph, what="edges") # get a data frame describing edges
-as_data_frame(f_graph, what="vertices")
 
 col_nodes <- c("#009444", "#939598")
 col_names <- c("#1C75BC", "#ED1C24", "black")
@@ -1275,7 +1272,7 @@ plot(f_graph, edge.width=2.5, edge.color="lightgray",
 
 ### 9. Pathway analysis of the genes within the ASD-specific CSPPI clusters.
 
-Pathway analysis was performed using the g:GOSt module of the g:Profiler tool. The significance level was determined using Benjamini-Hochberg algorithm (FDR < 0.05).
+Pathway analysis was performed using the g:GOSt module of the g:Profiler tool. The significance level was determined using Benjamini-Hochberg algorithm (FDR < 0.05). Uncomment the lines below to query g:GOSt.
 
 ```{r pathway_analysis}
 # This function quieries g:GOSt module of the g:Profiler tool. It takes a vector of genes and quieries the GOSt module. It outputs the dataframe with the query results for the genes.
@@ -1293,8 +1290,8 @@ query_kegg <- function(genes){
         })
 }
 
-## Uncomment the lines below to query g:GOSt
 ## Pathways analysis for 3 PPI clusters in adult cortex
+## Uncomment the lines below to query g:GOSt
 communities(a_lc)[1] # to get gene names
 a_1 <- communities(a_lc)$'1' # to get gene names
 #a_1_path <- query_kegg(a_1) # no pathways --> uknown cluster
