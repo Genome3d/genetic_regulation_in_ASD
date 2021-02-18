@@ -1078,7 +1078,7 @@ PPI_400 <- read.table(gzfile("results/string/tab_human_PPIs.full.v11.0_400.txt.g
 
 # removing all characters before and up to "."
 PPI_400$V1 <- gsub(".*\\.", "", PPI_400$V1); PPI_400$V2 <- gsub(".*\\.", "", PPI_400$V2)
-PPI_400 <- distinct(PPI_400[, c("V1", "V2")]) # 2,000,451 PPIs
+PPI_400 <- distinct(PPI_400) # 2,000,451 PPIs
 #write.table(PPI_400, file = "results/string/PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
 
 # extracting unique proteins
@@ -1134,10 +1134,10 @@ Transcriptome-wide fetal and adult cortex-specific PPIs (CSPPIs) were constructe
 ```{r CSPPIs}
 #subsetting PPIs that are present in fetal and adult cortical tissues
 f_PPI_400 <- subset(PPI_400, (PPI_400$V1 %in% f_df$protein_id & PPI_400$V2 %in% f_df$protein_id))
-#write.table(f_PPI_400, file = "results/string/fetal_PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+#write.table(f_PPI_400, file = "results/string/fetal_PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE) # 1,690,571 PPIs
 f_unique_proteins <- unique(c(f_PPI_400$V1, f_PPI_400$V2)) # 16,519
 a_PPI_400 <- subset(PPI_400, (PPI_400$V1 %in% a_df$protein_id & PPI_400$V2 %in% a_df$protein_id))
-#write.table(a_PPI_400, file = "results/string/adult_PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE)
+#write.table(a_PPI_400, file = "results/string/adult_PPI_400.txt", sep = "\t", col.names = FALSE, row.names=FALSE) # 1,784,342 PPIs
 a_unique_proteins <- unique(c(a_PPI_400$V1, a_PPI_400$V2)) # 17,156
 ```
 
@@ -1150,25 +1150,33 @@ names(f_dict) <- f_df$protein_id
 a_dict <- a_df$gene_name # 89,492 proteins
 names(a_dict) <- a_df$protein_id
 
-f_csppi.df <- data.frame()
-for(f in 1:nrow(f_PPI_400)){
-    p1 <- f_PPI_400[f,][1]; p2 <- f_PPI_400[f,][2]
-    t <- c(f_dict[p1$V1], f_dict[p2$V2])
-    f_csppi.df <- rbind(f_csppi.df, t)
+# ppi is a dataframe containing PPIs *first two columns) and combined score (the third column)
+create_csppi <- function(ppi, dict){
+    df <- data.frame()
+    for(i in 1:nrow(ppi)){
+        cat("Analysing PPI: ", i, "\n")
+        tryCatch({
+            p1 <- ppi[i,][1]; p2 <- ppi[i,][2]; comb <- ppi[i,][3]
+            t <- c(dict[p1$V1], dict[p2$V2], comb$V3)
+            df <- rbind(df, t)
+        }, error=function(e){
+            cat("ERROR: ", conditionMessage(e), "\n")
+        })
     }
-f_csppi.df <- distinct(f_csppi.df)
-colnames(f_csppi.df) <- c("p1", "p2")
+    df <- distinct(df)
+    colnames(df) <- c("p1", "p2", "combined_score")
+    return(df)
+}
+
+# Testing
+#test_subset <- subset(f_PPI_400, f_PPI_400$V3>997) # 21,381
+#test_f_csppi.df <- create_csppi(test_subset, f_dict)
+
+f_csppi.df <- create_csppi(f_PPI_400, f_dict) # 1,690,571 PPIs
 #write.table(f_csppi.df, file = "results/string/fetal_CSPPI_400.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 f_csppi.df <- read.table(gzfile("results/string/fetal_CSPPI_400.txt.gz"), header = TRUE, sep = "\t")
 
-a_csppi.df <- data.frame()
-for(a in 1:nrow(a_PPI_400)){
-    p1 <- a_PPI_400[a,][1]; p2 <- a_PPI_400[a,][2]
-    t <- c(a_dict[p1$V1], a_dict[p2$V2])
-    a_csppi.df <- rbind(a_csppi.df, t)
-    }
-a_csppi.df <- distinct(a_csppi.df)
-colnames(a_csppi.df) <- c("p1", "p2")
+a_csppi.df <- create_csppi(a_PPI_400, a_dict)
 #write.table(a_csppi.df, file = "results/string/adult_CSPPI_400.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 a_csppi.df <- read.table(gzfile("results/string/adult_CSPPI_400.txt.gz"), header = TRUE, sep = "\t")
 ```
