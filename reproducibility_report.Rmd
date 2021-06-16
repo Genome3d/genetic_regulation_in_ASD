@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE)
 # install.packages("pacman")
 # load libraries
 pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2, RColorBrewer,
-               ComplexHeatmap, circlize, EnsDb.Hsapiens.v86, gprofiler2, igraph)
+               ComplexHeatmap, circlize, EnsDb.Hsapiens.v86, gprofiler2, igraph, scales)
 ```
 
 This is a reproducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study. 
@@ -169,6 +169,26 @@ asd_ann_adult <- subset(asd_ann, asd_ann$SNP %in% adult_eqtls) # 58
 
 asd_fun_ann_fetal <- cal_ann(asd_ann_fetal, length(fetal_eqtls))
 asd_fun_ann_adult <- cal_ann(asd_ann_adult, length(adult_eqtls))
+
+# Checking functional annotation for all 454 ASD-associated SNPs
+asd_fun_ann <- cal_ann(asd_ann, 454)
+exonic <- asd_fun_ann[asd_fun_ann$annotation == "exonic", 3]
+df = data.frame("Mutations" = c("coding","non-coding"), "Percent" = c(exonic, 100 - exonic))
+pie = ggplot(df, aes(x="", y=Percent, fill=Mutations)) + geom_bar(stat="identity", width=1)
+pie = pie + coord_polar("y", start=0)
+
+blank_theme <- theme_minimal() + 
+    theme(axis.title.x = element_blank(),
+          axis.title.y = element_blank(),
+          panel.border = element_blank(),
+          panel.grid=element_blank(),
+          axis.ticks = element_blank(),
+          plot.title=element_text(size=14, face="bold"))
+
+#pdf("figures/asd_pie_chart.pdf", width = 6, height = 4)
+pie + scale_fill_manual(values=c("darkblue", "darkred")) +  blank_theme +
+  theme(axis.text.x=element_blank())
+#dev.off()
 
 # Fetal eQTLs
 f_number <- c(asd_fun_ann_fetal[asd_fun_ann_fetal$annotation=="downstream",][,2],
@@ -1118,10 +1138,10 @@ f_df <- f_df[, c("protein_id", "gene_name")]
 a_df <- a_df[, c("protein_id", "gene_name")]
 f_df <- f_df[complete.cases(f_df), ] # 87,065 proteins
 #write.table(f_df, file = "results/string/fetal_protein_gene_pairs.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
-f_df <- read.table("results/string/fetal_protein_gene_pairs.txt", header = TRUE, sep="\t")
+f_df <- read.table("results/string/fetal_protein_gene_pairs.txt", header = TRUE, sep="\t", colClasses = "character")
 a_df <- a_df[complete.cases(a_df), ] # 89,492 proteins
 #write.table(a_df, file = "results/string/adult_protein_gene_pairs.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
-a_df <- read.table("results/string/adult_protein_gene_pairs.txt", header = TRUE, sep="\t")
+a_df <- read.table("results/string/adult_protein_gene_pairs.txt", header = TRUE, sep="\t", colClasses = "character")
 ```
 
 Transcriptome-wide fetal and adult cortex-specific PPIs (CSPPIs) were constructed by combining the STRING PPI network with cortex-specific expression data from adult or fetal cortex datasets.
@@ -1153,6 +1173,7 @@ create_csppi <- function(ppi, dict){
         tryCatch({
             p1 <- ppi[i,][1]; p2 <- ppi[i,][2]; comb <- ppi[i,][3]
             t <- c(dict[p1$V1], dict[p2$V2], comb$V3)
+            #cat("PPI is: ", t, "\n")
             df <- rbind(df, t)
         }, error=function(e){
             cat("ERROR: ", conditionMessage(e), "\n")
@@ -1168,12 +1189,12 @@ create_csppi <- function(ppi, dict){
 #test_f_csppi.df <- create_csppi(test_subset, f_dict)
 
 # Uncomment the line below
-#f_csppi.df <- create_csppi(f_PPI_400, f_dict) # 1,690,571 PPIs
+f_csppi.df <- create_csppi(f_PPI_400, f_dict) # 1,690,571 PPIs
 #write.table(f_csppi.df, file = "results/string/fetal_CSPPI.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 #f_csppi.df <- read.table(gzfile("results/string/fetal_CSPPI.txt.gz"), header = TRUE, sep = "\t")
 
 # Uncomment the line below
-#a_csppi.df <- create_csppi(a_PPI_400, a_dict) # 1,784,342 PPIs
+a_csppi.df <- create_csppi(a_PPI_400, a_dict) # 1,784,342 PPIs
 #write.table(a_csppi.df, file = "results/string/adult_CSPPI.txt", sep = "\t", col.names = TRUE, row.names=FALSE)
 #a_csppi.df <- read.table(gzfile("results/string/adult_CSPPI.txt.gz"), header = TRUE, sep = "\t")
 ```
