@@ -173,8 +173,8 @@ asd_fun_ann_adult <- cal_ann(asd_ann_adult, length(adult_eqtls))
 # Checking functional annotation for all 454 ASD-associated SNPs
 asd_fun_ann <- cal_ann(asd_ann, 454)
 exonic <- asd_fun_ann[asd_fun_ann$annotation == "exonic", 3]
-df = data.frame("Mutations" = c("coding","non-coding"), "Percent" = c(exonic, 100 - exonic))
-pie = ggplot(df, aes(x="", y=Percent, fill=Mutations)) + geom_bar(stat="identity", width=1)
+df = data.frame("SNPs" = c("coding","non-coding"), "Percent" = c(exonic, 100 - exonic))
+pie = ggplot(df, aes(x="", y=Percent, fill=SNPs)) + geom_bar(stat="identity", width=1)
 pie = pie + coord_polar("y", start=0)
 
 blank_theme <- theme_minimal() + 
