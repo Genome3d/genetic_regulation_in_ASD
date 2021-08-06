@@ -1,6 +1,6 @@
-# Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex
+# Understanding the impact of SNPs associated with autism spectrum disorder on biological pathways in the human fetal and adult cortex
 
-This repository contains scripts, data, results, figures and reproducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study. In this study, we integrated ASD-associated GWAS SNPs with cortex-specific 3D genome structure and eQTL information to identify genes that are spatially regulated in fetal (14-21 postconceptional weeks) and adult (21-70 years of age) cortical tissues. We incorporated cortex-specific expression patterns and PPI networks to identify candidate genes and pathways that have putative roles in the etiology of ASD-associated changes in the cortex. 
+This repository contains scripts, data, results, figures and reproducibility report for "Understanding the impact of SNPs associated with autism spectrum disorder on biological pathways in the human fetal and adult cortex" study published in [Scientific Reports](https://www.nature.com/articles/s41598-021-95447-z). In this study, we integrated ASD-associated GWAS SNPs with cortex-specific 3D genome structure and eQTL information to identify genes that are spatially regulated in fetal (14-21 postconceptional weeks) and adult (21-70 years of age) cortical tissues. We incorporated cortex-specific expression patterns and PPI networks to identify candidate genes and pathways that have putative roles in the etiology of ASD-associated changes in the cortex. 
 
 Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were used for data processing, analysis and visualisation.  
 
@@ -14,3 +14,9 @@ Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were us
 8. GWAS SNP-trait associations (gwas_catalog_v1.0.2-associations_e100_r2020-08-26.tsv.gz) were downloaded from [GWAS Catalog](https://www.ebi.ac.uk/gwas/docs/file-downloads) on 26/08/2020.  
 9. A curated list of 1,237 genes that had been previously implicated in autism development was downloaded from [AutDB](http://autism.mindspec.org/autdb/Welcome.do;jsessionid=9EC2C3BDD4F54A2223B757AE42B22E7A) (accessed on 16/11/2020).  
 10. The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from https://string-db.org/ on 24/09/2020.  
+
+
+![Spatially regulated genes in fetal cortex, adult cortex, and in both](figures/figure_1.jpg)
+ASD-associated eQTLs mark loci that spatially regulate the expression of genes involved in the fetal brain, in the adult brain, or both.
+
+
