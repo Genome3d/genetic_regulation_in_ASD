@@ -1,5 +1,5 @@
 ---
-title: "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex"
+title: "Understanding the impact of SNPs associated with autism spectrum disorder on biological pathways in the human fetal and adult cortex"
 author: "Evgeniia Golovina"
 date: "02/02/2021"
 output:
@@ -15,7 +15,7 @@ pacman::p_load(ggplot2, pander, dplyr, tidyr, regioneR, rtracklayer, reshape2, R
                ComplexHeatmap, circlize, EnsDb.Hsapiens.v86, gprofiler2, igraph, scales)
 ```
 
-This is a reproducibility report for "Autism spectrum disorder: understanding the impact of SNPs on biological pathways in the fetal and adult cortex" study. 
+This is a reproducibility report for "Understanding the impact of SNPs associated with autism spectrum disorder on biological pathways in the human fetal and adult cortex" study published in [Scientific Reports](https://www.nature.com/articles/s41598-021-95447-z). 
 
 Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were used for data processing, analysis and visualisation.  
 
