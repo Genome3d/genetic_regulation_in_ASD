@@ -16,7 +16,5 @@ Python (version 3.6.9), R (version 4.0.2) and RStudio (version 1.2.5033) were us
 10. The STRING PPI network (version 11.0, protein.links.full.v11.0.txt.gz) was downloaded from https://string-db.org/ on 24/09/2020.  
 
 
-![Spatially regulated genes in fetal cortex, adult cortex, and in both](figures/figure_1.jpg)
-ASD-associated eQTLs mark loci that spatially regulate the expression of genes involved in the fetal brain, in the adult brain, or both.
-
-
+![ASD-associated SNPs impact on biological pathways in the human fetal and adult cortex](figures/figure_1.jpg)
+We identified 42 PPIs in the fetal and 10 PPIs in the adult cortical tissues. Louvain clustering identified seven PPI modules within the fetal cortex that were enriched for immune pathways, fatty acid metabolism, aminoacyl-tRNA biosynthesis, spliceosome, ribosome biogenesis in eukaryotes and two unknown modules. Adult PPIs form three modules that were enriched in immune pathways and two unknown modules.
